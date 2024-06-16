@@ -37,6 +37,70 @@ const errorHandler = (err, req, res, next) => {
           }
         })
         break
+      case 409:
+        res.status(409).json({
+          error: {
+            message: message || 'Conflict',
+            status: 409
+          }
+        })
+        break
+      case 413:
+        res.status(413).json({
+          error: {
+            message: message || 'Payload Too Large',
+            status: 413
+          }
+        });
+        break;
+      case 415:
+        res.status(415).json({
+          error: {
+            message: message || 'Unsupported Media Type',
+            status: 415
+          }
+        });
+        break;
+      case 429:
+        res.status(429).json({
+          error: {
+            message: message || 'Too Many Requests',
+            status: 429
+          }
+        });
+        break;
+      case 500:
+        res.status(500).json({
+          error: {
+            message: message || 'Internal Server Error',
+            status: 500
+          }
+        });
+        break;
+      case 502:
+        res.status(502).json({
+          error: {
+            message: message || 'Bad Gateway',
+            status: 502
+          }
+        });
+        break;
+      case 503:
+        res.status(503).json({
+          error: {
+            message: message || 'Service Unavailable',
+            status: 503
+          }
+        });
+        break;
+      case 504:
+        res.status(504).json({
+          error: {
+            message: message || 'Gateway Timeout',
+            status: 504
+          }
+        });
+        break;
       default:
         res.status(status).json({
           error: {
@@ -45,17 +109,8 @@ const errorHandler = (err, req, res, next) => {
           }
         })
         break
-        case 409:
-          res.status(409).json({
-            error: {
-              message: message || 'Conflict',
-              status: 409
-            }
-          })
-          break
     }
   }
-  
   const notFoundHandler = (req, res, next) => {
     const error = new Error('Not Found')
     error.status = 404

@@ -15,12 +15,18 @@ class ProjectController {
                 content : content, 
                 date : date
             }
+            if (req.file) {
+              infor.image = req.file.path; 
+          }
             await Project.create(infor)
             return res.status(201).json({
                 message: 'Created new project successfully!'
               });
         }
         catch (error) {
+          if (req.file) {
+            await fileUploader.deleteFile(req.file.path); // 刪除已上傳的文件
+        }
             next(error)
         }
     }
@@ -65,6 +71,9 @@ class ProjectController {
             content : content, 
             date : date
         }  
+        if (req.file) {
+          infor.image = req.file.path; 
+        }
         const project = await Project.findByIdAndUpdate(req.params.id, infor);
         if (!project) {
         const error = new Error('Project not found');
@@ -75,6 +84,9 @@ class ProjectController {
             message : "Updated project seccessfully!"
         });
     } catch (error) {
+      if (req.file) {
+        await fileUploader.deleteFile(req.file.path); // 刪除已上傳的文件
+    }
         next(error);
     }
     };

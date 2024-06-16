@@ -8,6 +8,7 @@ const { errorHandler, notFoundHandler } = require('./middlewares/errorHandler')
 const blogRoute = require('./routes/blogRoute')
 const projectRoute = require('./routes/projectRoute')
 const skillRoute = require('./routes/skillRoute')
+const fileUploaderRoute = require('./routes/fileUploaderRoute')
 
 const app = express()
 app.use(cors())
@@ -19,6 +20,7 @@ app.use(express.urlencoded({extended: true}))
 app.use('/api/blog', blogRoute)
 app.use('/api/project', projectRoute)
 app.use('/api/skill', skillRoute)
+app.use('api/', fileUploaderRoute)
 
 
 app.use(notFoundHandler)

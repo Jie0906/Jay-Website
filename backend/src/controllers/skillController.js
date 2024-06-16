@@ -15,13 +15,19 @@ class SkillController {
                 subtitle : subtitle, 
                 content : content
             }
+            if (req.file) {
+              infor.image = req.file.path; 
+          }
             await Skill.create(infor)
             return res.status(201).json({
                 message: 'Created new skill successfully!'
               });
         }
         catch (error) {
-            next(error)
+          if (req.file) {
+            await fileUploader.deleteFile(req.file.path); // 刪除已上傳的文件
+        }
+          next(error)
         }
     }
     getAllSkills = async (req, res, next) => {
@@ -45,7 +51,10 @@ class SkillController {
             title: title,
             subtitle : subtitle, 
             content : content
-        }  
+        } 
+        if (req.file) {
+          infor.image = req.file.path; 
+        }
         const skill = await Skill.findByIdAndUpdate(req.params.id, infor);
         if (!skill) {
         const error = new Error('Skill not found');
@@ -56,6 +65,9 @@ class SkillController {
             message : "Updated skill seccessfully!"
         });
     } catch (error) {
+        if (req.file) {
+          await fileUploader.deleteFile(req.file.path); // 刪除已上傳的文件
+      }
         next(error);
     }
     };
