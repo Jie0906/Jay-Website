@@ -3,7 +3,7 @@ import React from 'react';
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import Home from './components/Home';
-import About from './components/About';
+import AboutMe from './components/AboutMe';
 import Blog from './components/Blog';
 import BlogPost from './components/BlogPost';
 import Projects from './components/Projects';
@@ -15,11 +15,11 @@ function App() {
       <Navbar />
       <Routes>
         <Route path="/" element={<Home />} />
-        <Route path="/about" element={<About />} />
+        <Route path="/aboutMe" element={<AboutMe />} />
         <Route path="/blog" element={<Blog />} />
         <Route path="/blog/:id" element={<BlogPost />} />
-        <Route path="/projects" element={<Projects />} />
-        <Route path="/skills" element={<Skills />} />
+        <Route path="/project" element={<Projects />} />
+        <Route path="/skill" element={<Skills />} />
         {/* 添加其他路由 */}
       </Routes>
     </Router>

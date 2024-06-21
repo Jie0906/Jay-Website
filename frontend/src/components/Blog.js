@@ -1,11 +1,110 @@
 // src/components/Blog.js
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import styled from 'styled-components';
 import { FaShareAlt, FaHeart, FaComment } from 'react-icons/fa';
 import { Link } from 'react-router-dom';
 import { useInView } from 'react-intersection-observer';
 import ReactPaginate from 'react-paginate';
+import { fetchBlogs } from '../api/blogApi';
 
+const PostItem = ({ post }) => {
+  const { ref, inView } = useInView({ triggerOnce: true });
+
+  return (
+    <Post ref={ref} inView={inView} key={post._id}>
+      <PostHeader>
+        <PostTitle to={`/blog/${post._id}`}>{post.title}</PostTitle>
+        <PostDate>{new Date(post.date).toLocaleDateString()}</PostDate>
+      </PostHeader>
+      <PostContent>{post.content}</PostContent>
+      <PostFooter>
+        <IconButton><FaShareAlt /></IconButton>
+        <IconButton><FaHeart /></IconButton>
+        <IconButton><FaComment /></IconButton>
+      </PostFooter>
+    </Post>
+  );
+};
+
+const Blog = () => {
+  const postsPerPage = 4;
+  const [currentPage, setCurrentPage] = useState(0);
+  const [posts, setPosts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const getBlogs = async () => {
+      try {
+        const data = await fetchBlogs();
+        console.log(data);
+        setPosts(data);
+      } catch (error) {
+        console.error('Error fetching blogs:', error);
+        setError(error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    getBlogs();
+  }, []);
+
+  const pageCount = Math.ceil(posts.length / postsPerPage);
+  const displayPosts = posts.slice(currentPage * postsPerPage, (currentPage + 1) * postsPerPage);
+
+  const handlePageClick = ({ selected }) => {
+    setCurrentPage(selected);
+  };
+
+  if (loading) {
+    return <div>Loading...</div>;
+  }
+
+  if (error) {
+    return <div>Error: {error.message}</div>;
+  }
+
+  return (
+    <BlogContainer>
+      <Sidebar>
+        <SidebarTitle>分類</SidebarTitle>
+        <CategoryList>
+          <CategoryItem>技術</CategoryItem>
+          <CategoryItem>生活</CategoryItem>
+          <CategoryItem>旅行</CategoryItem>
+          <CategoryItem>學習</CategoryItem>
+        </CategoryList>
+      </Sidebar>
+      <Content>
+        {displayPosts.map((post) => (
+          <PostItem key={post._id} post={post} />
+        ))}
+        <PaginateContainer>
+          <ReactPaginate
+            previousLabel={'上一頁'}
+            nextLabel={'下一頁'}
+            breakLabel={'...'}
+            pageCount={pageCount}
+            marginPagesDisplayed={2}
+            pageRangeDisplayed={5}
+            onPageChange={handlePageClick}
+            containerClassName={'pagination'}
+            activeClassName={'active'}
+            pageClassName={'page-item'}
+            pageLinkClassName={'page-link'}
+            previousClassName={'page-item'}
+            previousLinkClassName={'page-link'}
+            nextClassName={'page-item'}
+            nextLinkClassName={'page-link'}
+            breakClassName={'page-item'}
+            breakLinkClassName={'page-link'}
+          />
+        </PaginateContainer>
+      </Content>
+    </BlogContainer>
+  );
+};
 const BlogContainer = styled.div`
   display: flex;
   padding: 50px;
@@ -149,97 +248,5 @@ const PaginateContainer = styled.div`
     cursor: not-allowed;
   }
 `;
-
-const Blog = () => {
-  const postsPerPage = 2;
-  const [currentPage, setCurrentPage] = useState(0);
-  const posts = [
-    {
-      id: 1,
-      title: 'Title 1',
-      date: '2024/05/13',
-      content: '這是一篇範例文章的部分內容...',
-    },
-    {
-      id: 2,
-      title: 'Title 2',
-      date: '2024/04/30',
-      content: '這是一篇範例文章的部分內容...',
-    },
-    {
-      id: 3,
-      title: 'Title 3',
-      date: '2024/03/30',
-      content: '這是一篇範例文章的部分內容...',
-    },
-    {
-      id: 4,
-      title: 'Title 4',
-      date: '2024/02/14',
-      content: '這是一篇範例文章的部分內容...',
-    },
-  ];
-
-  const pageCount = Math.ceil(posts.length / postsPerPage);
-  const displayPosts = posts.slice(currentPage * postsPerPage, (currentPage + 1) * postsPerPage);
-
-  const handlePageClick = ({ selected }) => {
-    setCurrentPage(selected);
-  };
-
-  return (
-    <BlogContainer>
-      <Sidebar>
-        <SidebarTitle>分類</SidebarTitle>
-        <CategoryList>
-          <CategoryItem>技術</CategoryItem>
-          <CategoryItem>生活</CategoryItem>
-          <CategoryItem>旅行</CategoryItem>
-          <CategoryItem>學習</CategoryItem>
-        </CategoryList>
-      </Sidebar>
-      <Content>
-        {displayPosts.map((post, index) => {
-          const { ref, inView } = useInView({ triggerOnce: true });
-          return (
-            <Post ref={ref} inView={inView} key={post.id}>
-              <PostHeader>
-                <PostTitle to={`/blog/${post.id}`}>{post.title}</PostTitle>
-                <PostDate>{post.date}</PostDate>
-              </PostHeader>
-              <PostContent>{post.content}</PostContent>
-              <PostFooter>
-                <IconButton><FaShareAlt /></IconButton>
-                <IconButton><FaHeart /></IconButton>
-                <IconButton><FaComment /></IconButton>
-              </PostFooter>
-            </Post>
-          );
-        })}
-        <PaginateContainer>
-          <ReactPaginate
-            previousLabel={'上一頁'}
-            nextLabel={'下一頁'}
-            breakLabel={'...'}
-            pageCount={pageCount}
-            marginPagesDisplayed={2}
-            pageRangeDisplayed={5}
-            onPageChange={handlePageClick}
-            containerClassName={'pagination'}
-            activeClassName={'active'}
-            pageClassName={'page-item'}
-            pageLinkClassName={'page-link'}
-            previousClassName={'page-item'}
-            previousLinkClassName={'page-link'}
-            nextClassName={'page-item'}
-            nextLinkClassName={'page-link'}
-            breakClassName={'page-item'}
-            breakLinkClassName={'page-link'}
-          />
-        </PaginateContainer>
-      </Content>
-    </BlogContainer>
-  );
-};
 
 export default Blog;

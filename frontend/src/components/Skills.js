@@ -1,7 +1,64 @@
 // src/components/Skills.js
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import styled from 'styled-components';
 import { useInView } from 'react-intersection-observer';
+import { getAllSkills } from '../api/skillApi';
+
+const SkillSection = ({ skill }) => {
+  const { ref, inView } = useInView({ triggerOnce: true });
+
+  return (
+    <SkillItem ref={ref} style={{ opacity: inView ? 1 : 0.5, transform: inView ? 'scale(1)' : 'scale(0.9)' }}>
+      <SkillDetails>
+        <SkillTitle>{skill.title}</SkillTitle>
+        <SkillSubtitle>{skill.subtitle}</SkillSubtitle>
+        <SkillDescription>{skill.content}</SkillDescription>
+      </SkillDetails>
+      {skill.image && (
+        <SkillImageWrapper>
+          <SkillImage src={skill.image} alt={skill.title} />
+        </SkillImageWrapper>
+      )}
+    </SkillItem>
+  );
+};
+
+const Skills = () => {
+  const [skills, setSkills] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const fetchSkills = async () => {
+      try {
+        const data = await getAllSkills();
+        setSkills(data);
+        setLoading(false);
+      } catch (error) {
+        setError(error);
+        setLoading(false);
+      }
+    };
+
+    fetchSkills();
+  }, []);
+
+  if (loading) {
+    return <div>Loading...</div>;
+  }
+
+  if (error) {
+    return <div>Error: {error.message}</div>;
+  }
+
+  return (
+    <SkillsContainer>
+      {skills.map((skill) => (
+        <SkillSection key={skill._id} skill={skill} />
+      ))}
+    </SkillsContainer>
+  );
+};
 
 const SkillsContainer = styled.div`
   display: flex;
@@ -13,7 +70,7 @@ const SkillsContainer = styled.div`
   box-sizing: border-box;
 `;
 
-const SkillSection = styled.div`
+const SkillItem = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -24,8 +81,6 @@ const SkillSection = styled.div`
   background-color: #fffaf0;
   border-radius: 15px;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-  opacity: ${({ inView }) => (inView ? 1 : 0)};
-  transform: ${({ inView }) => (inView ? 'scale(1)' : 'scale(0.9)')};
   transition: opacity 0.6s ease-out, transform 0.6s ease-out;
 `;
 
@@ -36,6 +91,12 @@ const SkillDetails = styled.div`
 const SkillTitle = styled.h2`
   margin: 0;
   color: #8b5e3c;
+`;
+
+const SkillSubtitle = styled.h3`
+  font-size: 1.2em;
+  margin-bottom: 10px;
+  color: grey;
 `;
 
 const SkillDescription = styled.p`
@@ -57,42 +118,5 @@ const SkillImage = styled.img`
   object-fit: cover;
 `;
 
-const Skills = () => {
-  const { ref: backendRef, inView: backendInView } = useInView({ triggerOnce: true });
-  const { ref: mlRef, inView: mlInView } = useInView({ triggerOnce: true });
-
-  return (
-    <SkillsContainer>
-      <SkillSection ref={backendRef} inView={backendInView}>
-        <SkillDetails>
-          <SkillTitle>Backend</SkillTitle>
-          <SkillDescription>
-            Experience with Node.js, Express, and database management with MongoDB and SQL.
-          </SkillDescription>
-          <SkillDescription>
-            Proficient in developing RESTful APIs and managing user authentication.
-          </SkillDescription>
-        </SkillDetails>
-        <SkillImageWrapper>
-          <SkillImage src="/assets/backend.jpg" alt="Backend" />
-        </SkillImageWrapper>
-      </SkillSection>
-      <SkillSection ref={mlRef} inView={mlInView}>
-        <SkillDetails>
-          <SkillTitle>Machine Learning</SkillTitle>
-          <SkillDescription>
-            Knowledge of machine learning algorithms and hands-on experience with TensorFlow and Keras.
-          </SkillDescription>
-          <SkillDescription>
-            Experience in developing and deploying machine learning models.
-          </SkillDescription>
-        </SkillDetails>
-        <SkillImageWrapper>
-          <SkillImage src="/assets/machine_learning.jpg" alt="Machine Learning" />
-        </SkillImageWrapper>
-      </SkillSection>
-    </SkillsContainer>
-  );
-};
 
 export default Skills;

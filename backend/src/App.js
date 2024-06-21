@@ -22,7 +22,7 @@ app.use('/api/blog', blogRoute)
 app.use('/api/project', projectRoute)
 app.use('/api/skill', skillRoute)
 app.use('/api/aboutMe', aboutMeRoute)
-app.use('api/', fileUploaderRoute)
+app.use('/api/', fileUploaderRoute)
 
 
 app.use(notFoundHandler)
