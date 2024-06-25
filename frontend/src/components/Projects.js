@@ -1,8 +1,67 @@
 // src/components/Projects.js
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import styled from 'styled-components';
 import { FaHeart, FaShareAlt, FaComment } from 'react-icons/fa';
 import { useInView } from 'react-intersection-observer';
+import { getAllProjects } from '../api/projectApi';
+
+const ProjectItemComponent = ({ project }) => {
+  const { ref, inView } = useInView({ triggerOnce: true });
+
+  return (
+    <ProjectItem ref={ref} style={{ opacity: inView ? 1 : 0.5 }}>
+      <ProjectHeader>
+        <ProjectTitle>{project.title}</ProjectTitle>
+        <ProjectDate>{new Date(project.date).toLocaleDateString()}</ProjectDate>
+      </ProjectHeader>
+      <ProjectFooter>
+        <IconButton><FaHeart /></IconButton>
+        <IconButton><FaShareAlt /></IconButton>
+        <IconButton><FaComment /></IconButton>
+      </ProjectFooter>
+    </ProjectItem>
+  );
+};
+
+const Projects = () => {
+  const [projects, setProjects] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const fetchProjects = async () => {
+      try {
+        const data = await getAllProjects();
+        console.log(data);
+        setProjects(data);
+        setLoading(false);
+      } catch (error) {
+        setError(error);
+        setLoading(false);
+      }
+    };
+
+    fetchProjects();
+  }, []);
+
+  if (loading) {
+    return <div>Loading...</div>;
+  }
+
+  if (error) {
+    return <div>Error: {error.message}</div>;
+  }
+
+  return (
+    <ProjectsContainer>
+      {projects.map((project) => (
+        <ProjectItemComponent key={project._id} project={project} />
+      ))}
+    </ProjectsContainer>
+  );
+};
+
+
 
 const ProjectsContainer = styled.div`
   display: flex;
@@ -61,37 +120,5 @@ const IconButton = styled.button`
     color: #d48c2e;
   }
 `;
-
-const Projects = () => {
-  const { ref: firstRef, inView: firstInView } = useInView({ triggerOnce: true });
-  const { ref: secondRef, inView: secondInView } = useInView({ triggerOnce: true });
-
-  return (
-    <ProjectsContainer>
-      <ProjectItem ref={firstRef} inView={firstInView}>
-        <ProjectHeader>
-          <ProjectTitle>Project 1</ProjectTitle>
-          <ProjectDate>2024/05/13</ProjectDate>
-        </ProjectHeader>
-        <ProjectFooter>
-          <IconButton><FaHeart /></IconButton>
-          <IconButton><FaShareAlt /></IconButton>
-          <IconButton><FaComment /></IconButton>
-        </ProjectFooter>
-      </ProjectItem>
-      <ProjectItem ref={secondRef} inView={secondInView}>
-        <ProjectHeader>
-          <ProjectTitle>Project 2</ProjectTitle>
-          <ProjectDate>2024/04/30</ProjectDate>
-        </ProjectHeader>
-        <ProjectFooter>
-          <IconButton><FaHeart /></IconButton>
-          <IconButton><FaShareAlt /></IconButton>
-          <IconButton><FaComment /></IconButton>
-        </ProjectFooter>
-      </ProjectItem>
-    </ProjectsContainer>
-  );
-};
 
 export default Projects;

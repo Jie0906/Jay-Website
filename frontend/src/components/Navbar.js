@@ -63,10 +63,10 @@ const Navbar = () => {
     <NavbarContainer>
       <NavLogo href="/">Jay Website</NavLogo>
       <NavItems>
-        <NavLink href="/about">About me</NavLink>
-        <NavLink href="/skills">Skills</NavLink>
+        <NavLink href="/aboutMe">About me</NavLink>
+        <NavLink href="/skill">Skills</NavLink>
         <NavLink href="/blog">Blog</NavLink>
-        <NavLink href="/projects">Projects</NavLink>
+        <NavLink href="/project">Projects</NavLink>
         <SearchButton>
           <FaSearch />
         </SearchButton>
