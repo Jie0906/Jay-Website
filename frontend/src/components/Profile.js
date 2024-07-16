@@ -1,15 +1,27 @@
 // src/components/Profile.js
 import React from 'react';
-import styled from 'styled-components';
+import styled, { keyframes } from 'styled-components';
+
+// 定义动画
+const slideIn = keyframes`
+  from { transform: translateX(-100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+`;
+
+const fadeIn = keyframes`
+  from { opacity: 0; transform: scale(0.8); }
+  to { opacity: 1; transform: scale(1); }
+`;
 
 const ProfileContainer = styled.div`
   display: flex;
   justify-content: center;
   align-items: center;
   padding: 50px;
-  background: url('/assets/background.jpeg') no-repeat center center; /* 背景图片 */
+  background: url('/assets/adavator.jpeg') no-repeat center center; /* 头像图片作为背景 */
   background-size: cover;
-  height: calc(100vh - 80px);
+  height: 100vh; /* 高度设置为 100vh 以充满整个视窗高度 */
+  width: 100vw; /* 宽度设置为 100vw 以充满整个视窗宽度 */
   position: relative;
   overflow: hidden;
 `;
@@ -27,58 +39,43 @@ const Overlay = styled.div`
 const ProfileContent = styled.div`
   position: relative;
   z-index: 2;
-  display: grid;
-  grid-template-columns: 1fr 2fr;
-  grid-template-rows: auto auto;
-  gap: 20px;
-  max-width: 1200px;
-  width: 100%;
-  border-radius: 15px;
-`;
-
-const ProfileImageWrapper = styled.div`
-  grid-column: 1 / span 1;
-  grid-row: 1 / span 2;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: center;
-  width: 100%;
+  text-align: center;
+  color: white;
+  padding: 20px;
 `;
 
-const ProfileImage = styled.img`
-  width: 200px;
-  height: 200px;
-  border-radius: 50%;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+const ProfileName = styled.h1`
+  margin: 10px 0;
+  font-size: 3rem;
+  font-weight: bold;
+  color: white;
+  animation: ${slideIn} 2s ease-out forwards;
+`;
+
+const Subtitle = styled.div`
+  margin-top: 5px;
+  font-size: 1.2rem;
+  color: white;
+  opacity: 0;
+  animation: ${fadeIn} 1s ease-out forwards;
+  animation-delay: 2s; /* 在 ProfileName 动画结束后开始 */
 `;
 
 const Motto = styled.div`
-  grid-column: 2 / span 1;
-  grid-row: 1 / span 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  margin-top: 10px;
   font-size: 1.5rem;
-  color: #7a5533;
-`;
-
-const Bio = styled.div`
-  grid-column: 2 / span 1;
-  grid-row: 2 / span 1;
-  background-color: #fffaf0;
-  border-radius: 15px;
-  padding: 20px;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-`;
-
-const BioText = styled.p`
-  font-size: 1.2rem;
-  color: #7a5533;
-  text-align: left;
-  margin: 0;
+  color: #EAC100;
+  text-shadow: 
+    -1px -1px 0 #ffffff,  
+     1px -1px 0 #ffffff,
+    -1px  1px 0 #ffffff,
+     1px  1px 0 #ffffff; /* 添加白色外框 */
+  opacity: 0;
+  animation: ${fadeIn} 1s ease-out forwards;
+  animation-delay: 3s; /* 在 Subtitle 动画结束后开始 */
 `;
 
 const Profile = () => {
@@ -86,15 +83,9 @@ const Profile = () => {
     <ProfileContainer>
       <Overlay />
       <ProfileContent>
-        <ProfileImageWrapper>
-          <ProfileImage src="/assets/adavator.JPG" alt="Profile" />
-        </ProfileImageWrapper>
-        <Motto>“If you are doing your best,you will not have to worry about failure.”</Motto>
-        <Bio>
-          <BioText>
-            I'm a dedicated culture critic and blogger located in San Francisco, California. Geraldine DeRuiter's husband Rand has a job that takes him all over the world. After she was laid off from her job, she started tagging along with him and blogging their experiences at The Everywhereist. She says she blogs to help Rand remember where they’ve been and what they’ve seen, but she consistently does see the site set up as doing for the rest of us what she can: making us feel like we’re in on the adventure she’s having.
-          </BioText>
-        </Bio>
+        <ProfileName>Jay Li Perosonal Website</ProfileName>
+        <Subtitle>Engineer by Profession | Coder by Passion</Subtitle>
+        <Motto>“If you are doing your best, you will not have to worry about failure.”</Motto>
       </ProfileContent>
     </ProfileContainer>
   );

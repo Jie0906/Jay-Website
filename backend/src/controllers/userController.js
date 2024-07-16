@@ -58,8 +58,14 @@ class UserController {
           const checkPassword = await decrypt(password, userExist.password);
           const jsonWebToken = await jwtHandler.signJWT({ payload })
           const sessionId = await sessionHandler.SavingSessionDataToRedis(userExist.role, userId)
-          res.cookie('sessionId', sessionId)
-          res.cookie('jsonWebToken', jsonWebToken)
+          res.cookie('sessionId', sessionId, {
+            signed: true,
+            httpOnly: false,
+          });
+          res.cookie('jsonWebToken', jsonWebToken, {
+              signed: true,
+              httpOnly: false,
+          });        
           return res.status(200).json({
           message: `Login successfully! Welcome back ${userExist.name}.`,
           accessToken: jsonWebToken,
@@ -74,7 +80,8 @@ class UserController {
       logout = async (req, res, next) => {
         try {
           const sessionId = req.cookies.sessionId;
-          if (!sessionId) {
+          const token = req.cookies.jsonWebToken;
+          if ( !sessionId || !token ) {
             const error = new Error('No sessionId provided')
             error.status = 400
             throw error

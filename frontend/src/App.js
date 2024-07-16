@@ -8,6 +8,8 @@ import Blog from './components/Blog';
 import BlogPost from './components/BlogPost';
 import Projects from './components/Projects';
 import Skills from './components/Skills';
+import Login from './components/Login'
+import SignUp from './components/SignUp';
 
 function App() {
   return (
@@ -20,6 +22,8 @@ function App() {
         <Route path="/blog/:id" element={<BlogPost />} />
         <Route path="/project" element={<Projects />} />
         <Route path="/skill" element={<Skills />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/signUp" element={<SignUp />} />
         {/* 添加其他路由 */}
       </Routes>
     </Router>

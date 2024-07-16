@@ -21,7 +21,10 @@ const AboutMeSchema = new mongoose.Schema({
   date: {
     type: Date
   },
-  image: {
+  imagePath: {
+    type: String
+  },
+  imageUrl: {
     type: String
   }
 },{

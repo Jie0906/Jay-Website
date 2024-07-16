@@ -18,12 +18,16 @@ class AboutMeController {
                 date: date
             }
             if (req.file) {
-              infor.image = req.file.path; 
+              infor.imagePath = req.filePath;
+              infor.imageUrl = req.fileUrl;
           }
-            await AboutMe.create(infor)
-            return res.status(201).json({
-                message: 'Created new content successfully!'
-              });
+          const newAboutMe = await AboutMe.create(infor);
+
+          return res.status(201).json({
+              message: 'Created new content successfully!',
+              newAboutMe
+              
+          });
         }
         catch (error) {
           if (req.file) {
@@ -33,13 +37,13 @@ class AboutMeController {
         }
     }
     getAllAboutMe = async (req, res, next) => {
-        try {
+      try {
           const aboutMeContent = await AboutMe.find({ deleted: false });
           res.status(200).json(aboutMeContent);
-        } catch (error) {
+      } catch (error) {
           next(error);
-        }
-      };
+      }
+  };
     
     getAboutMeById = async (req, res, next) => {
     try {
@@ -76,7 +80,8 @@ class AboutMeController {
             date: date
         } 
         if (req.file) {
-          infor.image = req.file.path; 
+          infor.imagePath = req.filePath;
+          infor.imageUrl = req.fileUrl;
         }
         const aboutMeContent = await AboutMe.findByIdAndUpdate(req.params.id, infor);
         if (!aboutMeContent) {

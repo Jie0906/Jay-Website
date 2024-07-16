@@ -1,24 +1,9 @@
-// src/components/AboutMe.js
 import React, { useEffect, useState } from 'react';
-import styled from 'styled-components';
+import styled, { keyframes } from 'styled-components';
+import { getAboutMe } from '../api/aboutMeApi';
 import { useInView } from 'react-intersection-observer';
-import { getAboutMe } from '../api/aboutMeApi'
 
-const TimelineItem = ({ date, text, image }) => {
-  const { ref, inView } = useInView({ triggerOnce: true });
-
-  return (
-    <StyledTimelineItem ref={ref} inView={inView}>
-      <TimelineContent>
-        <TimelineDate>{date}</TimelineDate>
-        <TimelineText>{text}</TimelineText>
-        <TimelineImage src={image} alt={date} />
-      </TimelineContent>
-    </StyledTimelineItem>
-  );
-};
-
-const About = () => {
+const AboutMe = () => {
   const [aboutMeContent, setAboutMeContent] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -27,7 +12,8 @@ const About = () => {
     const fetchAboutMe = async () => {
       try {
         const data = await getAboutMe();
-        setAboutMeContent(data);
+        console.log(data); // 檢查返回的數據結構
+        setAboutMeContent(data); // 確保使用正確的數據路徑
         setLoading(false);
       } catch (error) {
         setError(error);
@@ -49,16 +35,33 @@ const About = () => {
   return (
     <AboutContainer>
       <Timeline>
-        {aboutMeContent.map((item) => (
+        {aboutMeContent.map((item, index) => (
           <TimelineItem
             key={item._id}
             date={item.date}
-            text={item.content}
-            image={item.image}
+            subtitle={item.subtitle}
+            content={item.content}
+            fileUrl={item.imageUrl} // 使用從後端返回的 imageUrl
+            isLeft={index % 2 === 0}
           />
         ))}
       </Timeline>
     </AboutContainer>
+  );
+};
+
+const TimelineItem = ({ date, subtitle, content, fileUrl, isLeft }) => {
+  const { ref, inView } = useInView({ triggerOnce: true });
+
+  return (
+    <StyledTimelineItem ref={ref} inView={inView} isLeft={isLeft}>
+      <TimelineContent isLeft={isLeft}>
+        <TimelineSubtitle>{subtitle}</TimelineSubtitle>
+        <TimelineText>{content}</TimelineText>
+        <TimelineDate>{new Date(date).toLocaleDateString()}</TimelineDate>
+      </TimelineContent>
+      <TimelineImage src={fileUrl} alt={subtitle} isLeft={isLeft} />
+    </StyledTimelineItem>
   );
 };
 
@@ -83,6 +86,17 @@ const Timeline = styled.div`
   }
 `;
 
+const slideIn = keyframes`
+  from {
+    opacity: 0;
+    transform: translateY(100px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+`;
+
 const StyledTimelineItem = styled.div`
   padding: 20px 30px;
   position: relative;
@@ -90,7 +104,7 @@ const StyledTimelineItem = styled.div`
   width: 50%;
   opacity: ${({ inView }) => (inView ? 1 : 0)};
   transform: ${({ inView }) => (inView ? 'none' : 'translateY(100px)')};
-  transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+  animation: ${({ inView }) => (inView ? slideIn : 'none')} 0.6s ease-out;
   &:nth-child(odd) {
     left: 0;
   }
@@ -123,12 +137,21 @@ const TimelineContent = styled.div`
   }
 `;
 
-const TimelineDate = styled.h3`
+const TimelineSubtitle = styled.h4`
   margin: 0;
   color: #8b5e3c;
 `;
 
 const TimelineText = styled.p`
+  margin: 10px 0;
+  color: #7a5533;
+`;
+
+const TimelineDate = styled.p`
+  position: absolute;
+  bottom: 10px;
+  right: 20px;
+  margin: 0;
   color: #7a5533;
 `;
 
@@ -139,12 +162,8 @@ const TimelineImage = styled.img`
   border-radius: 50%;
   position: absolute;
   top: 20px;
-  right: -130px;
+  ${({ isLeft }) => (isLeft ? 'right: -130px;' : 'left: -130px;')}
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-  &:nth-child(even) {
-    left: -130px;
-    right: auto;
-  }
 `;
 
-export default About;
+export default AboutMe;
