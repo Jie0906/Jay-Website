@@ -16,11 +16,13 @@ class SkillController {
                 content : content
             }
             if (req.file) {
-              infor.image = req.file.path; 
+              infor.imagePath = req.filePath;
+              infor.imageUrl = req.fileUrl;
           }
-            await Skill.create(infor)
+            const newSkill = await Skill.create(infor)
             return res.status(201).json({
-                message: 'Created new skill successfully!'
+                message: 'Created new skill successfully!',
+                newSkill
               });
         }
         catch (error) {
@@ -53,7 +55,8 @@ class SkillController {
             content : content
         } 
         if (req.file) {
-          infor.image = req.file.path; 
+          infor.imagePath = req.filePath;
+          infor.imageUrl = req.fileUrl;
         }
         const skill = await Skill.findByIdAndUpdate(req.params.id, infor);
         if (!skill) {

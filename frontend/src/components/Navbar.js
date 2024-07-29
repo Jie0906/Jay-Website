@@ -1,147 +1,96 @@
 // src/components/Navbar.js
-import React, { useState, useEffect } from 'react';
-import styled from 'styled-components';
-import { FaCaretDown, FaSearch } from 'react-icons/fa';
-import { logout } from '../api/logoutApi';
+import React, { useEffect, useRef } from 'react';
+import styled, { keyframes } from 'styled-components';
+
+const fadeIn = keyframes`
+  from { opacity: 0; }
+  to { opacity: 1; }
+`;
 
 const NavbarContainer = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
   width: 100%;
-  padding: 10px 20px;
+  padding: 15px 0;
   background-color: #fffaf0;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  animation: ${fadeIn} 0.5s ease-out;
 `;
 
 const NavLogo = styled.a`
-  font-size: 1.5rem;
+  font-size: 1.8rem;
   font-weight: bold;
   color: #d48c2e;
   text-decoration: none;
   cursor: pointer;
-  transition: color 0.3s ease;
+  transition: all 0.3s ease;
 
   &:hover {
     color: #7a5533;
+    transform: scale(1.05);
   }
 `;
 
 const NavItems = styled.div`
   display: flex;
-  gap: 20px;
+  gap: 25px;
   align-items: center;
 `;
 
 const NavLink = styled.a`
   text-decoration: none;
   color: #7a5533;
-  font-size: 1rem;
+  font-size: 1.1rem;
   padding: 10px;
-  transition: color 0.3s ease;
-
-  &:hover {
-    color: #d48c2e;
-  }
-`;
-
-const SearchButton = styled.button`
-  background: none;
-  border: none;
-  cursor: pointer;
-  color: #7a5533;
-  font-size: 1.5rem;
-  padding: 10px;
-  transition: color 0.3s ease;
-
-  &:hover {
-    color: #d48c2e;
-  }
-`;
-
-const Dropdown = styled.div`
+  transition: all 0.3s ease;
   position: relative;
-  display: inline-block;
-`;
 
-const DropdownContent = styled.div`
-  display: ${({ isOpen }) => (isOpen ? 'block' : 'none')};
-  position: absolute;
-  background-color: #fffaf0;
-  min-width: 160px;
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
-  z-index: 1;
-`;
-
-const DropdownItem = styled.a`
-  color: #7a5533;
-  padding: 12px 16px;
-  text-decoration: none;
-  display: block;
-  cursor: pointer;
+  &:after {
+    content: '';
+    position: absolute;
+    width: 0;
+    height: 2px;
+    bottom: 0;
+    left: 50%;
+    background-color: #d48c2e;
+    transition: all 0.3s ease;
+  }
 
   &:hover {
-    background-color: #d48c2e;
-    color: #fff;
+    color: #d48c2e;
+    transform: translateY(-2px);
+    
+    &:after {
+      width: 100%;
+      left: 0;
+    }
   }
 `;
 
 const Navbar = () => {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [username, setUsername] = useState('');
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const navRef = useRef(null);
 
   useEffect(() => {
-    const accessToken = localStorage.getItem('accessToken');
-    const sessionId = localStorage.getItem('sessionId');
-    const storedUsername = localStorage.getItem('username');
-    if (accessToken && sessionId && storedUsername) {
-      setIsLoggedIn(true);
-      setUsername(storedUsername);
+    if (navRef.current) {
+      const height = navRef.current.offsetHeight;
+      document.documentElement.style.setProperty('--navbar-height', `${height}px`);
     }
   }, []);
 
-  const handleLogout = async () => {
-    try {
-      const data = await logout();
-      localStorage.removeItem('accessToken');
-      localStorage.removeItem('sessionId');
-      localStorage.removeItem('username');
-      setIsLoggedIn(false);
-      setUsername('');
-      window.location.href = '/login';
-    } catch (error) {
-      console.error('Logout failed', error);
-    }
-  };
-
-  const toggleDropdown = () => {
-    setIsDropdownOpen(!isDropdownOpen);
-  };
-
   return (
-    <NavbarContainer>
+    <NavbarContainer ref={navRef}>
       <NavLogo href="/">Jay Website</NavLogo>
       <NavItems>
         <NavLink href="/aboutMe">About me</NavLink>
         <NavLink href="/skill">Skills</NavLink>
         <NavLink href="/blog">Blog</NavLink>
         <NavLink href="/project">Projects</NavLink>
-        {isLoggedIn ? (
-          <Dropdown>
-            <span onClick={toggleDropdown} style={{ cursor: 'pointer' }}>
-              Hello, {username} <FaCaretDown />
-            </span>
-            <DropdownContent isOpen={isDropdownOpen.toString()}>
-              <DropdownItem onClick={handleLogout}>Logout</DropdownItem>
-            </DropdownContent>
-          </Dropdown>
-        ) : (
-          <NavLink href="/login">Login</NavLink>
-        )}
-        <SearchButton>
-          <FaSearch />
-        </SearchButton>
       </NavItems>
     </NavbarContainer>
   );

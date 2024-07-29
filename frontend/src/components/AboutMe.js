@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import styled, { keyframes } from 'styled-components';
 import { getAboutMe } from '../api/aboutMeApi';
 import { useInView } from 'react-intersection-observer';
+import Loading from '../components/common/Loading';
 
 const AboutMe = () => {
   const [aboutMeContent, setAboutMeContent] = useState([]);
@@ -12,8 +13,7 @@ const AboutMe = () => {
     const fetchAboutMe = async () => {
       try {
         const data = await getAboutMe();
-        console.log(data); // 檢查返回的數據結構
-        setAboutMeContent(data); // 確保使用正確的數據路徑
+        setAboutMeContent(data);
         setLoading(false);
       } catch (error) {
         setError(error);
@@ -24,146 +24,197 @@ const AboutMe = () => {
     fetchAboutMe();
   }, []);
 
-  if (loading) {
-    return <div>Loading...</div>;
-  }
-
-  if (error) {
-    return <div>Error: {error.message}</div>;
-  }
+  if (loading) return <Loading />;
+  if (error) return <ErrorMessage>Error: {error.message}</ErrorMessage>;
 
   return (
     <AboutContainer>
-      <Timeline>
-        {aboutMeContent.map((item, index) => (
-          <TimelineItem
-            key={item._id}
-            date={item.date}
-            subtitle={item.subtitle}
-            content={item.content}
-            fileUrl={item.imageUrl} // 使用從後端返回的 imageUrl
-            isLeft={index % 2 === 0}
-          />
-        ))}
-      </Timeline>
+      <BackgroundCircle1 />
+      <BackgroundCircle2 />
+      <ContentWrapper>
+        <Title>我的經歷</Title>
+        <TimelineWrapper>
+          {aboutMeContent.map((item, index) => (
+            <TimelineItem
+              key={item._id}
+              date={item.date}
+              subtitle={item.subtitle}
+              content={item.content}
+              fileUrl={item.imageUrl}
+              isLeft={index % 2 === 0}
+            />
+          ))}
+        </TimelineWrapper>
+      </ContentWrapper>
     </AboutContainer>
   );
 };
 
 const TimelineItem = ({ date, subtitle, content, fileUrl, isLeft }) => {
-  const { ref, inView } = useInView({ triggerOnce: true });
+  const { ref, inView } = useInView({ 
+    triggerOnce: true,
+    threshold: 0.2,
+  });
 
   return (
     <StyledTimelineItem ref={ref} inView={inView} isLeft={isLeft}>
+      <TimelineDot />
       <TimelineContent isLeft={isLeft}>
-        <TimelineSubtitle>{subtitle}</TimelineSubtitle>
-        <TimelineText>{content}</TimelineText>
-        <TimelineDate>{new Date(date).toLocaleDateString()}</TimelineDate>
+        <TimelineImage src={fileUrl} alt={subtitle} />
+        <TextContent>
+          <TimelineDate>{new Date(date).toLocaleDateString()}</TimelineDate>
+          <TimelineSubtitle>{subtitle}</TimelineSubtitle>
+          <TimelineText>{content}</TimelineText>
+        </TextContent>
       </TimelineContent>
-      <TimelineImage src={fileUrl} alt={subtitle} isLeft={isLeft} />
     </StyledTimelineItem>
   );
 };
 
-const AboutContainer = styled.div`
-  padding: 50px;
-  background-color: #fef5e7;
-`;
-
-const Timeline = styled.div`
-  position: relative;
-  max-width: 1200px;
-  margin: 0 auto;
-  &:before {
-    content: '';
-    position: absolute;
-    width: 6px;
-    background-color: #d48c2e;
-    top: 0;
-    bottom: 0;
-    left: 50%;
-    margin-left: -3px;
-  }
+const fadeIn = keyframes`
+  from { opacity: 0; }
+  to { opacity: 1; }
 `;
 
 const slideIn = keyframes`
-  from {
+  from { 
     opacity: 0;
-    transform: translateY(100px);
+    transform: translateX(${props => props.isLeft ? '-50px' : '50px'});
   }
-  to {
+  to { 
     opacity: 1;
-    transform: translateY(0);
+    transform: translateX(0);
+  }
+`;
+
+const AboutContainer = styled.div`
+  padding: 50px 20px;
+  background: linear-gradient(135deg, #fef5e7 0%, #ffd79a 100%);
+  min-height: 100vh;
+  position: relative;
+  overflow: hidden;
+`;
+
+const BackgroundCircle1 = styled.div`
+  position: absolute;
+  width: 500px;
+  height: 500px;
+  border-radius: 50%;
+  background-color: rgba(212, 140, 46, 0.1);
+  top: -250px;
+  left: -250px;
+`;
+
+const BackgroundCircle2 = styled.div`
+  position: absolute;
+  width: 400px;
+  height: 400px;
+  border-radius: 50%;
+  background-color: rgba(139, 94, 60, 0.1);
+  bottom: -200px;
+  right: -200px;
+`;
+
+const ContentWrapper = styled.div`
+  max-width: 1200px;
+  margin: 0 auto;
+  position: relative;
+  z-index: 1;
+`;
+
+const Title = styled.h1`
+  text-align: center;
+  color: #8b5e3c;
+  font-size: 2.5rem;
+  margin-bottom: 50px;
+  animation: ${fadeIn} 1s ease-out;
+`;
+
+const TimelineWrapper = styled.div`
+  position: relative;
+  padding: 40px 0;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 50%;
+    width: 4px;
+    background-color: #d48c2e;
+    transform: translateX(-50%);
   }
 `;
 
 const StyledTimelineItem = styled.div`
-  padding: 20px 30px;
-  position: relative;
-  background-color: inherit;
-  width: 50%;
-  opacity: ${({ inView }) => (inView ? 1 : 0)};
-  transform: ${({ inView }) => (inView ? 'none' : 'translateY(100px)')};
-  animation: ${({ inView }) => (inView ? slideIn : 'none')} 0.6s ease-out;
-  &:nth-child(odd) {
-    left: 0;
-  }
-  &:nth-child(even) {
-    left: 50%;
-  }
+  display: flex;
+  justify-content: ${props => props.isLeft ? 'flex-start' : 'flex-end'};
+  padding-bottom: 50px;
+  width: 100%;
+  opacity: ${props => props.inView ? 1 : 0};
+  animation: ${props => props.inView ? slideIn : 'none'} 0.6s ease-out;
+`;
+
+const TimelineDot = styled.div`
+  position: absolute;
+  left: 50%;
+  width: 20px;
+  height: 20px;
+  background-color: #d48c2e;
+  border-radius: 50%;
+  transform: translateX(-50%);
+  z-index: 2;
 `;
 
 const TimelineContent = styled.div`
-  padding: 20px 30px;
-  background-color: #fffaf0;
-  position: relative;
-  border-radius: 6px;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-  &:after {
-    content: '';
-    position: absolute;
-    width: 25px;
-    height: 25px;
-    right: -17px;
-    background-color: #d48c2e;
-    border: 4px solid #fffaf0;
-    top: 15px;
-    border-radius: 50%;
-    z-index: 1;
+  width: 45%;
+  padding: 20px;
+  background-color: rgba(255, 250, 240, 0.8);
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+  align-items: ${props => props.isLeft ? 'flex-start' : 'flex-end'};
+  backdrop-filter: blur(5px);
+  transition: transform 0.3s ease;
+
+  &:hover {
+    transform: translateY(-5px);
   }
-  &:nth-child(even):after {
-    left: -17px;
-    right: auto;
-  }
-`;
-
-const TimelineSubtitle = styled.h4`
-  margin: 0;
-  color: #8b5e3c;
-`;
-
-const TimelineText = styled.p`
-  margin: 10px 0;
-  color: #7a5533;
-`;
-
-const TimelineDate = styled.p`
-  position: absolute;
-  bottom: 10px;
-  right: 20px;
-  margin: 0;
-  color: #7a5533;
 `;
 
 const TimelineImage = styled.img`
-  width: 100px;
-  height: 100px;
+  width: 100%;
+  height: 200px;
   object-fit: cover;
-  border-radius: 50%;
-  position: absolute;
-  top: 20px;
-  ${({ isLeft }) => (isLeft ? 'right: -130px;' : 'left: -130px;')}
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  margin-bottom: 15px;
+`;
+
+const TextContent = styled.div`
+  width: 100%;
+`;
+
+const TimelineDate = styled.p`
+  font-size: 0.9rem;
+  color: #d48c2e;
+  margin-bottom: 5px;
+`;
+
+const TimelineSubtitle = styled.h3`
+  color: #8b5e3c;
+  margin-bottom: 10px;
+`;
+
+const TimelineText = styled.p`
+  color: #7a5533;
+  line-height: 1.6;
+`;
+
+const ErrorMessage = styled.div`
+  color: red;
+  text-align: center;
+  padding: 20px;
 `;
 
 export default AboutMe;

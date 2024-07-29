@@ -1,91 +1,107 @@
-// src/components/Profile.js
 import React from 'react';
 import styled, { keyframes } from 'styled-components';
-
-// 定义动画
-const slideIn = keyframes`
-  from { transform: translateX(-100%); opacity: 0; }
-  to { transform: translateX(0); opacity: 1; }
-`;
+import { FaLinkedin, FaGithub, FaEnvelope } from 'react-icons/fa';
 
 const fadeIn = keyframes`
-  from { opacity: 0; transform: scale(0.8); }
-  to { opacity: 1; transform: scale(1); }
+  from { opacity: 0; }
+  to { opacity: 1; }
+`;
+
+const slideUp = keyframes`
+  from { transform: translateY(50px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
 `;
 
 const ProfileContainer = styled.div`
   display: flex;
   justify-content: center;
   align-items: center;
-  padding: 50px;
-  background: url('/assets/adavator.jpeg') no-repeat center center; /* 头像图片作为背景 */
+  height: 100vh;
+  width: 100vw;
+  background:   
+    radial-gradient(circle, rgba(0, 0, 0, 0.8) 0%, rgba(0, 0, 0, 0.4) 100%),
+    url('/assets/adavator.jpeg') no-repeat center center;
   background-size: cover;
-  height: 100vh; /* 高度设置为 100vh 以充满整个视窗高度 */
-  width: 100vw; /* 宽度设置为 100vw 以充满整个视窗宽度 */
   position: relative;
   overflow: hidden;
 `;
 
-const Overlay = styled.div`
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(255, 250, 240, 0.6); /* 半透明背景 */
-  z-index: 1;
-`;
-
 const ProfileContent = styled.div`
-  position: relative;
-  z-index: 2;
   display: flex;
   flex-direction: column;
   align-items: center;
   text-align: center;
   color: white;
-  padding: 20px;
+  padding: 40px;
+  background: rgba(0, 0, 0, 0.5);
+  border-radius: 20px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(10px);
+  animation: ${fadeIn} 1.5s ease-out;
 `;
 
 const ProfileName = styled.h1`
-  margin: 10px 0;
-  font-size: 3rem;
+  font-size: 3.5rem;
   font-weight: bold;
-  color: white;
-  animation: ${slideIn} 2s ease-out forwards;
+  margin-bottom: 20px;
+  animation: ${slideUp} 1s ease-out 0.5s both;
 `;
 
 const Subtitle = styled.div`
-  margin-top: 5px;
-  font-size: 1.2rem;
-  color: white;
-  opacity: 0;
-  animation: ${fadeIn} 1s ease-out forwards;
-  animation-delay: 2s; /* 在 ProfileName 动画结束后开始 */
+  font-size: 1.4rem;
+  margin-bottom: 30px;
+  animation: ${slideUp} 1s ease-out 1s both;
 `;
 
 const Motto = styled.div`
-  margin-top: 10px;
-  font-size: 1.5rem;
-  color: #EAC100;
-  text-shadow: 
-    -1px -1px 0 #ffffff,  
-     1px -1px 0 #ffffff,
-    -1px  1px 0 #ffffff,
-     1px  1px 0 #ffffff; /* 添加白色外框 */
-  opacity: 0;
-  animation: ${fadeIn} 1s ease-out forwards;
-  animation-delay: 3s; /* 在 Subtitle 动画结束后开始 */
+  font-size: 1.6rem;
+  font-style: italic;
+  color: #FFC300;
+  margin-bottom: 40px;
+  max-width: 600px;
+  line-height: 1.4;
+  animation: ${slideUp} 1s ease-out 1.5s both;
+`;
+
+const SocialLinks = styled.div`
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  margin-top: 20px;
+  animation: ${slideUp} 1s ease-out 2s both;
+`;
+
+const SocialIcon = styled.a`
+  color: white;
+  font-size: 1.8rem;
+  transition: all 0.3s ease;
+
+  &:hover {
+    color: #FFC300;
+    transform: translateY(-5px);
+  }
 `;
 
 const Profile = () => {
   return (
     <ProfileContainer>
-      <Overlay />
       <ProfileContent>
-        <ProfileName>Jay Li Perosonal Website</ProfileName>
+        <ProfileName>Jay Li</ProfileName>
         <Subtitle>Engineer by Profession | Coder by Passion</Subtitle>
-        <Motto>“If you are doing your best, you will not have to worry about failure.”</Motto>
+        <Motto>
+          "If you are doing your best, you will not have to worry about failure."
+        </Motto>
+        <SocialLinks>
+          <SocialIcon href="#" target="_blank" rel="noopener noreferrer">
+            <FaLinkedin />
+          </SocialIcon>
+          <SocialIcon href="#" target="_blank" rel="noopener noreferrer">
+            <FaGithub />
+          </SocialIcon>
+          <SocialIcon href="mailto:your.email@example.com">
+            <FaEnvelope />
+          </SocialIcon>
+        </SocialLinks>
       </ProfileContent>
     </ProfileContainer>
   );

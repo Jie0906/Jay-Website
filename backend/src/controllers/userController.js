@@ -60,11 +60,13 @@ class UserController {
           const sessionId = await sessionHandler.SavingSessionDataToRedis(userExist.role, userId)
           res.cookie('sessionId', sessionId, {
             signed: true,
-            httpOnly: false,
+            httpOnly: true,
+            sameSite: 'Strict'
           });
           res.cookie('jsonWebToken', jsonWebToken, {
               signed: true,
-              httpOnly: false,
+              httpOnly: true,
+              sameSite: 'Strict'
           });        
           return res.status(200).json({
           message: `Login successfully! Welcome back ${userExist.name}.`,
@@ -96,6 +98,7 @@ class UserController {
             next (error)
         }
       }
+
 }
 
 module.exports = new UserController()
