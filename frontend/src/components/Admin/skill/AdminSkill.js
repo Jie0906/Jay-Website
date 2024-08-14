@@ -1,95 +1,117 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import styled, { keyframes } from 'styled-components';
 import { useInView } from 'react-intersection-observer';
 import { getAllSkills, createSkill, updateSkill, deleteSkill, restoreSkill } from '../../../api/skillApi';
 import TextEditor from '../../../components/common/TextEditor';
 import Loading from '../../../components/common/Loading';
+import { useMessage } from '../../../components/common/MessagePopup';
 import { FaEdit, FaTrash, FaPlus, FaUndo } from 'react-icons/fa';
 
-const fadeIn = keyframes`
-  from { opacity: 0; }
-  to { opacity: 1; }
-`;
-
-const slideIn = keyframes`
-  from { transform: translateY(30px); opacity: 0; }
-  to { transform: translateY(0); opacity: 1; }
-`;
-
-const Skills = () => {
+const AdminSkill = () => {
+  // State management
   const [skills, setSkills] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [editingSkill, setEditingSkill] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
+  const [currentSkill, setCurrentSkill] = useState(null);
+  const { addMessage } = useMessage();
+
+  // Fields configuration
+  const fields = [
+    { name: 'title', type: 'text', placeholder: '技能名稱', required: true },
+    { name: 'subtitle', type: 'text', placeholder: '簡短描述' },
+    { name: 'content', type: 'content', placeholder: '詳細描述...' },
+  ];
+
+  // Fetch data
+  const fetchSkills = useCallback(async () => {
+    try {
+      setLoading(true);
+      const data = await getAllSkills();
+      setSkills(data);
+    } catch (error) {
+      addMessage(error.message, 'error');
+    } finally {
+      setLoading(false);
+    }
+  }, [addMessage]);
 
   useEffect(() => {
     fetchSkills();
-  }, []);
+  }, [fetchSkills]);
 
-  const fetchSkills = async () => {
+  // Event handlers
+  const handleCreate = () => {
+    setCurrentSkill({ title: '', subtitle: '', content: '' });
+    setIsEditing(true);
+  };
+
+  const handleEdit = (skill) => {
+    setCurrentSkill(skill);
+    setIsEditing(true);
+  };
+
+  const handleSave = async (data) => {
     try {
-      const data = await getAllSkills();
-      setSkills(data);
-      setLoading(false);
+      setLoading(true);
+      if (currentSkill._id) {
+        await updateSkill(currentSkill._id, data);
+      } else {
+        await createSkill(data);
+      }
+      await fetchSkills();
+      resetEditingState();
+      addMessage(currentSkill._id ? '技能已成功更新' : '新技能已成功創建', 'success');
     } catch (error) {
-      setError(error.message);
+      addMessage(error.message, 'error');
+    } finally {
       setLoading(false);
     }
   };
 
-  const handleEdit = (skill) => {
-    setEditingSkill(skill);
-    setIsEditing(true);
-  };
-
   const handleDelete = async (id) => {
     try {
+      setLoading(true);
       await deleteSkill(id);
-      setSkills(skills.filter(skill => skill._id !== id));
+      await fetchSkills();
+      addMessage('技能已成功刪除', 'success');
     } catch (error) {
-      setError(error.message);
+      addMessage(error.message, 'error');
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleRestore = async (id) => {
     try {
-      const restoredSkill = await restoreSkill(id);
-      setSkills([...skills, restoredSkill]);
+      setLoading(true);
+      await restoreSkill(id);
+      await fetchSkills();
+      addMessage('技能已成功恢復', 'success');
     } catch (error) {
-      setError(error.message);
+      addMessage(error.message, 'error');
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleSave = async (formData) => {
-    try {
-      if (editingSkill) {
-        const updatedSkill = await updateSkill(editingSkill._id, formData);
-        setSkills(skills.map(skill => 
-          skill._id === editingSkill._id ? updatedSkill : skill
-        ));
-      } else {
-        const newSkill = await createSkill(formData);
-        setSkills([...skills, newSkill]);
-      }
-      setIsEditing(false);
-      setEditingSkill(null);
-    } catch (error) {
-      setError(error.message);
-    }
+  // Helper functions
+  const resetEditingState = () => {
+    setIsEditing(false);
+    setCurrentSkill(null);
   };
 
-  if (loading) return <Loading />;
-  if (error) return <ErrorMessage>Error: {error}</ErrorMessage>;
+  if (loading) {
+    return <Loading />;
+  }
 
   return (
     <SkillsContainer>
       <BackgroundPattern />
       <ContentWrapper>
         <SkillsHeader>
-          <SkillsTitle>Manage Skills</SkillsTitle>
+          <SkillsTitle>Skills 管理</SkillsTitle>
+          <AddButton onClick={handleCreate}><FaPlus /> 添加新技能</AddButton>
         </SkillsHeader>
-        <AddButton onClick={() => setIsEditing(true)}><FaPlus /> Add New Skill</AddButton>
         <SkillsList>
           {skills.map((skill) => (
             <SkillItem 
@@ -104,13 +126,11 @@ const Skills = () => {
         {isEditing && (
           <EditorOverlay>
             <EditorContainer>
-              <SkillEditor 
-                skill={editingSkill} 
+              <TextEditor
+                initialData={currentSkill}
                 onSave={handleSave}
-                onCancel={() => {
-                  setIsEditing(false);
-                  setEditingSkill(null);
-                }}
+                onCancel={resetEditingState}
+                fields={fields}
               />
             </EditorContainer>
           </EditorOverlay>
@@ -148,66 +168,21 @@ const SkillItem = ({ skill, onEdit, onDelete, onRestore }) => {
   );
 };
 
-const SkillEditor = ({ skill, onSave, onCancel }) => {
-  const [editedSkill, setEditedSkill] = useState(skill || { title: '', subtitle: '', content: '' });
-  const [file, setFile] = useState(null);
+// Styled components (保持原有的樣式)
+const fadeIn = keyframes`
+  from { opacity: 0; }
+  to { opacity: 1; }
+`;
 
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setEditedSkill(prev => ({ ...prev, [name]: value }));
-  };
-
-  const handleContentChange = (content) => {
-    setEditedSkill(prev => ({ ...prev, content }));
-  };
-
-  const handleFileChange = (e) => {
-    setFile(e.target.files[0]);
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    const formData = new FormData();
-    formData.append('title', editedSkill.title);
-    formData.append('subtitle', editedSkill.subtitle);
-    formData.append('content', editedSkill.content);
-    if (file) {
-      formData.append('image', file);
-    }
-    await onSave(formData);
-  };
-
-  return (
-    <EditorForm onSubmit={handleSubmit}>
-      <Input
-        type="text"
-        name="title"
-        value={editedSkill.title}
-        onChange={handleInputChange}
-        placeholder="Title"
-        required
-      />
-      <Input
-        type="text"
-        name="subtitle"
-        value={editedSkill.subtitle}
-        onChange={handleInputChange}
-        placeholder="Subtitle"
-      />
-      <TextEditor value={editedSkill.content} onChange={handleContentChange} />
-      <Input type="file" onChange={handleFileChange} />
-      <ButtonGroup>
-        <SubmitButton type="submit">Save</SubmitButton>
-        <CancelButton type="button" onClick={onCancel}>Cancel</CancelButton>
-      </ButtonGroup>
-    </EditorForm>
-  );
-};
+const slideIn = keyframes`
+  from { transform: translateY(30px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+`;
 
 const SkillsContainer = styled.div`
   position: relative;
   min-height: 100vh;
-  background-color: #f5e5d3; // 奶茶色背景
+  background-color: #f5e5d3;
   overflow: hidden;
 `;
 
@@ -240,16 +215,16 @@ const SkillsHeader = styled.div`
 `;
 
 const SkillsTitle = styled.h1`
-  color: #6b4226; // 深奶茶色
+  color: #6b4226;
   font-size: 3rem;
   text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
 `;
 
 const AddButton = styled.button`
   display: block;
-  margin: 0 auto 30px;
+  margin: 20px auto 30px;
   padding: 12px 24px;
-  background-color: #8b5a2b; // 深奶茶色
+  background-color: #8b5a2b;
   color: white;
   border: none;
   border-radius: 5px;
@@ -377,70 +352,4 @@ const EditorContainer = styled.div`
   animation: ${slideIn} 0.3s ease-out;
 `;
 
-const EditorForm = styled.form`
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-`;
-
-const Input = styled.input`
-  padding: 10px;
-  font-size: 1rem;
-  border: 1px solid #d3b08c;
-  border-radius: 5px;
-  color: #4a3520;
-
-  &:focus {
-    outline: none;
-    border-color: #8b5a2b;
-  }
-`;
-
-const ButtonGroup = styled.div`
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-`;
-
-const Button = styled.button`
-  padding: 10px 20px;
-  font-size: 1rem;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-  transition: background-color 0.3s, transform 0.3s;
-
-  &:hover {
-    transform: translateY(-2px);
-  }
-`;
-
-const SubmitButton = styled(Button)`
-  background-color: #8b5a2b;
-  color: white;
-
-  &:hover {
-    background-color: #6b4226;
-  }
-`;
-
-const CancelButton = styled(Button)`
-  background-color: #d3b08c;
-  color: #4a3520;
-
-  &:hover {
-    background-color: #c19a6b;
-  }
-`;
-
-const ErrorMessage = styled.div`
-  color: #b22222;
-  text-align: center;
-  padding: 20px;
-  font-size: 1.2rem;
-  background-color: #ffe4e1;
-  border-radius: 5px;
-  margin: 20px;
-`;
-
-export default Skills;
+export default AdminSkill;

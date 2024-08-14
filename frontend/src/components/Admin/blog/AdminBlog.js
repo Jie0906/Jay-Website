@@ -1,86 +1,136 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import styled, { keyframes } from 'styled-components';
 import { FaEdit, FaTrash, FaPlus, FaUndo, FaTags } from 'react-icons/fa';
 import { useInView } from 'react-intersection-observer';
 import { fetchBlogs, createBlog, updateBlog, deleteBlog, restoreBlog } from '../../../api/blogApi';
 import TextEditor from '../../../components/common/TextEditor';
+import Loading from '../../../components/common/Loading';
+import { useMessage } from '../../../components/common/MessagePopup';
+import DOMPurify from 'dompurify';
 
 const AdminBlog = () => {
+  // State management
   const [blogs, setBlogs] = useState([]);
-  const [categories, setCategories] = useState(['技術', '生活', '旅行', '學習']);
+  const [categories, setCategories] = useState(['技術筆記', '刷題心得']);
   const [selectedCategory, setSelectedCategory] = useState('全部');
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [editingBlog, setEditingBlog] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
+  const [currentBlog, setCurrentBlog] = useState(null);
+  const [page, setPage] = useState(1);
+  const [limit] = useState(10);
+  const [totalPages, setTotalPages] = useState(0);
+  const [search, setSearch] = useState('');
+  const { addMessage } = useMessage();
+
+  // Fields configuration
+  const fields = [
+    { name: 'title', type: 'text', placeholder: '標題', required: true },
+    { name: 'category', type: 'select', placeholder: '選擇分類', options: categories.map(c => ({ value: c, label: c })), required: true },
+    { name: 'content', type: 'content', placeholder: '文章內容', required: true },
+    { name: 'date', type: 'date', placeholder: '發布日期', required: true },
+  ];
+
+  // Fetch data
+  const fetchAllBlogs = useCallback(async () => {
+    try {
+      setLoading(true);
+      const data = await fetchBlogs(page, limit, search);
+      setBlogs(data.posts || data);
+      setTotalPages(data.totalPages || 1);
+    } catch (error) {
+      addMessage(error.message, 'error');
+    } finally {
+      setLoading(false);
+    }
+  }, [page, limit, search, addMessage]);
 
   useEffect(() => {
     fetchAllBlogs();
-  }, []);
+  }, [fetchAllBlogs]);
 
-  const fetchAllBlogs = async () => {
+  // Event handlers
+  const handleCreate = () => {
+    setCurrentBlog({ title: '', category: '', content: '', date: new Date().toISOString().split('T')[0] });
+    setIsEditing(true);
+  };
+
+  const handleEdit = (blog) => {
+    setCurrentBlog(blog);
+    setIsEditing(true);
+  };
+
+  const handleSave = async (blogData) => {
     try {
-      const data = await fetchBlogs();
-      setBlogs(data);
-      setLoading(false);
+      setLoading(true);
+      if (currentBlog._id) {
+        await updateBlog(currentBlog._id, blogData);
+        addMessage('文章已成功更新', 'success');
+      } else {
+        await createBlog(blogData);
+        addMessage('新文章已成功創建', 'success');
+      }
+      await fetchAllBlogs();
+      resetEditingState();
     } catch (error) {
-      setError(error.message);
+      addMessage(error.message, 'error');
+    } finally {
       setLoading(false);
     }
   };
 
-  const handleEdit = (blog) => {
-    setEditingBlog(blog);
-    setIsEditing(true);
-  };
-
   const handleDelete = async (id) => {
     try {
+      setLoading(true);
       await deleteBlog(id);
-      setBlogs(blogs.filter(blog => blog._id !== id));
+      addMessage('文章已成功刪除', 'success');
+      await fetchAllBlogs();
     } catch (error) {
-      setError(error.message);
+      addMessage(error.message, 'error');
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleRestore = async (id) => {
     try {
-      const restoredBlog = await restoreBlog(id);
-      setBlogs([...blogs, restoredBlog]);
+      setLoading(true);
+      await restoreBlog(id);
+      addMessage('文章已成功恢復', 'success');
+      await fetchAllBlogs();
     } catch (error) {
-      setError(error.message);
+      addMessage(error.message, 'error');
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleSave = async (blogData) => {
-    try {
-      if (editingBlog) {
-        const updatedBlog = await updateBlog(editingBlog._id, blogData);
-        setBlogs(blogs.map(blog => 
-          blog._id === editingBlog._id ? updatedBlog : blog
-        ));
-      } else {
-        const newBlog = await createBlog(blogData);
-        setBlogs([...blogs, newBlog]);
-      }
-      setIsEditing(false);
-      setEditingBlog(null);
-    } catch (error) {
-      setError(error.message);
-    }
+  // Helper functions
+  const resetEditingState = () => {
+    setIsEditing(false);
+    setCurrentBlog(null);
+  };
+
+  const handlePageChange = (newPage) => {
+    setPage(newPage);
+  };
+
+  const handleSearch = (searchTerm) => {
+    setSearch(searchTerm);
+    setPage(1);
   };
 
   const filteredBlogs = selectedCategory === '全部' 
     ? blogs 
     : blogs.filter(blog => blog.category === selectedCategory);
 
-  if (loading) return <LoadingScreen>Loading...</LoadingScreen>;
-  if (error) return <ErrorMessage>{error}</ErrorMessage>;
+  if (loading) {
+    return <Loading />;
+  }
 
   return (
     <AdminContainer>
       <Sidebar>
-        <SidebarTitle>Blog管理</SidebarTitle>
+        <SidebarTitle>Blog 管理</SidebarTitle>
         <CategoryList>
           <CategoryItem 
             active={selectedCategory === '全部'} 
@@ -98,28 +148,50 @@ const AdminBlog = () => {
             </CategoryItem>
           ))}
         </CategoryList>
-        <AddButton onClick={() => setIsEditing(true)}>
+        <AddButton onClick={handleCreate}>
           <FaPlus /> 新增文章
         </AddButton>
       </Sidebar>
       <MainContent>
+        <SearchBar>
+          <Input
+            type="text"
+            value={search}
+            onChange={(e) => handleSearch(e.target.value)}
+            placeholder="搜索文章..."
+          />
+        </SearchBar>
         <BlogList>
           {filteredBlogs.map(blog => (
-            <BlogItem key={blog._id} blog={blog} onEdit={handleEdit} onDelete={handleDelete} onRestore={handleRestore} />
+            <BlogItem 
+              key={blog._id} 
+              blog={blog} 
+              onEdit={handleEdit}
+              onDelete={handleDelete}
+              onRestore={handleRestore} 
+            />
           ))}
         </BlogList>
+        {totalPages > 1 && (
+          <Pagination>
+            <PaginationButton onClick={() => handlePageChange(page - 1)} disabled={page === 1}>
+              上一頁
+            </PaginationButton>
+            <PageInfo>第 {page} 頁，共 {totalPages} 頁</PageInfo>
+            <PaginationButton onClick={() => handlePageChange(page + 1)} disabled={page === totalPages}>
+              下一頁
+            </PaginationButton>
+          </Pagination>
+        )}
       </MainContent>
       {isEditing && (
         <EditorOverlay>
           <EditorContainer>
-            <BlogEditor 
-              blog={editingBlog} 
-              categories={categories}
+            <TextEditor 
+              initialData={currentBlog}
               onSave={handleSave}
-              onCancel={() => {
-                setIsEditing(false);
-                setEditingBlog(null);
-              }}
+              onCancel={resetEditingState}
+              fields={fields}
             />
           </EditorContainer>
         </EditorOverlay>
@@ -134,64 +206,33 @@ const BlogItem = ({ blog, onEdit, onDelete, onRestore }) => {
     threshold: 0.1,
   });
 
+  const truncateHTML = (html, maxLength) => {
+    const clean = DOMPurify.sanitize(html);
+    const div = document.createElement('div');
+    div.innerHTML = clean;
+    const text = div.textContent || div.innerText || '';
+    return text.length > maxLength ? text.substr(0, maxLength) + '...' : text;
+  };
+
   return (
     <StyledBlogItem ref={ref} inView={inView}>
-      <BlogTitle>{blog.title}</BlogTitle>
+      <BlogHeader>
+        <BlogTitle>{blog.title}</BlogTitle>
+        <ActionButtons>
+          <ActionButton onClick={() => onEdit(blog)}><FaEdit /></ActionButton>
+          {blog.deleted ? (
+            <ActionButton onClick={() => onRestore(blog._id)}><FaUndo /></ActionButton>
+          ) : (
+            <ActionButton onClick={() => onDelete(blog._id)}><FaTrash /></ActionButton>
+          )}
+        </ActionButtons>
+      </BlogHeader>
       <BlogMeta>
         <BlogDate>{new Date(blog.date).toLocaleDateString()}</BlogDate>
         <BlogCategory><FaTags /> {blog.category}</BlogCategory>
       </BlogMeta>
-      <BlogContent>{blog.content.substring(0, 150)}...</BlogContent>
-      <ActionButtons>
-        <ActionButton onClick={() => onEdit(blog)}><FaEdit /></ActionButton>
-        {blog.deleted ? (
-          <ActionButton onClick={() => onRestore(blog._id)}><FaUndo /></ActionButton>
-        ) : (
-          <ActionButton onClick={() => onDelete(blog._id)}><FaTrash /></ActionButton>
-        )}
-      </ActionButtons>
+      <BlogContent>{truncateHTML(blog.content, 150)}</BlogContent>
     </StyledBlogItem>
-  );
-};
-
-const BlogEditor = ({ blog, categories, onSave, onCancel }) => {
-  const [editedBlog, setEditedBlog] = useState(blog || { title: '', content: '', category: categories[0], date: new Date() });
-
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setEditedBlog(prev => ({ ...prev, [name]: value }));
-  };
-
-  const handleContentChange = (content) => {
-    setEditedBlog(prev => ({ ...prev, content }));
-  };
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    onSave(editedBlog);
-  };
-
-  return (
-    <EditorForm onSubmit={handleSubmit}>
-      <Input
-        type="text"
-        name="title"
-        value={editedBlog.title}
-        onChange={handleInputChange}
-        placeholder="標題"
-        required
-      />
-      <Select name="category" value={editedBlog.category} onChange={handleInputChange}>
-        {categories.map(category => (
-          <option key={category} value={category}>{category}</option>
-        ))}
-      </Select>
-      <TextEditor value={editedBlog.content} onChange={handleContentChange} />
-      <ButtonGroup>
-        <SubmitButton type="submit">保存</SubmitButton>
-        <CancelButton type="button" onClick={onCancel}>取消</CancelButton>
-      </ButtonGroup>
-    </EditorForm>
   );
 };
 
@@ -243,6 +284,31 @@ const CategoryItem = styled.li`
   }
 `;
 
+const CategoryItemWithDelete = styled(CategoryItem)`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+`;
+
+const DeleteCategoryButton = styled.button`
+  background: none;
+  border: none;
+  color: #ff6b6b;
+  cursor: pointer;
+  font-size: 1.2em;
+  padding: 0 5px;
+  transition: color 0.3s;
+
+  &:hover {
+    color: #ff0000;
+  }
+`;
+
+const AddCategoryForm = styled.form`
+  display: flex;
+  margin-top: 10px;
+`;
+
 const AddButton = styled.button`
   display: flex;
   align-items: center;
@@ -268,9 +334,20 @@ const MainContent = styled.div`
   overflow-y: auto;
 `;
 
+const SearchBar = styled.div`
+  margin-bottom: 20px;
+`;
+
+const Input = styled.input`
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #d3b08c;
+  border-radius: 5px;
+`;
+
 const BlogList = styled.div`
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  display: flex;
+  flex-direction: column;
   gap: 20px;
 `;
 
@@ -288,11 +365,21 @@ const StyledBlogItem = styled.div`
     transform: translateY(-5px);
     box-shadow: 0 4px 15px rgba(0,0,0,0.15);
   }
+
+  display: flex;
+  flex-direction: column;
+`;
+
+const BlogHeader = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
 `;
 
 const BlogTitle = styled.h3`
   color: #6b4226;
-  margin-bottom: 10px;
+  margin: 0;
 `;
 
 const BlogMeta = styled.div`
@@ -360,54 +447,35 @@ const EditorContainer = styled.div`
   animation: ${slideIn} 0.3s ease-out;
 `;
 
-const EditorForm = styled.form`
+const Pagination = styled.div`
   display: flex;
-  flex-direction: column;
-  gap: 15px;
+  justify-content: center;
+  align-items: center;
+  margin-top: 20px;
 `;
 
-const Input = styled.input`
-  padding: 10px;
-  border: 1px solid #d3b08c;
-  border-radius: 5px;
-`;
-
-const Select = styled.select`
-  padding: 10px;
-  border: 1px solid #d3b08c;
-  border-radius: 5px;
-`;
-
-const ButtonGroup = styled.div`
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-`;
-
-const Button = styled.button`
-  padding: 10px 20px;
+const PaginationButton = styled.button`
+  background-color: #8b5a2b;
+  color: white;
   border: none;
+  padding: 10px 15px;
+  margin: 0 10px;
   border-radius: 5px;
   cursor: pointer;
   transition: background-color 0.3s;
-`;
-
-const SubmitButton = styled(Button)`
-  background-color: #8b5a2b;
-  color: white;
 
   &:hover {
     background-color: #6b4226;
   }
+
+  &:disabled {
+    background-color: #d3b08c;
+    cursor: not-allowed;
+  }
 `;
 
-const CancelButton = styled(Button)`
-  background-color: #d3b08c;
-  color: #4a3520;
-
-  &:hover {
-    background-color: #c19a6b;
-  }
+const PageInfo = styled.span`
+  color: #6b4226;
 `;
 
 const LoadingScreen = styled.div`

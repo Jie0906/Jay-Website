@@ -1,91 +1,165 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import styled, { keyframes } from 'styled-components';
 import { getAboutMe, createAboutMe, updateAboutMe, deleteAboutMe } from '../../../api/aboutMeApi';
-import { useInView } from 'react-intersection-observer';
 import Loading from '../../common/Loading';
+import { useMessage } from '../../common/MessagePopup';
+import TimelineItem from '../../common/TimelineItem';
 import TextEditor from '../../common/TextEditor';
 
 const AdminAboutMe = () => {
-  const [aboutMeContent, setAboutMeContent] = useState([]);
+  // State management
+  const [aboutMeContent, setAboutMeContent] = useState({
+    autobiography: [],
+    education: [],
+    experience: []
+  });
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
   const [currentItem, setCurrentItem] = useState(null);
-  const [editorContent, setEditorContent] = useState('');
+  const [selectedType, setSelectedType] = useState('');
+  const { addMessage } = useMessage();
+
+  // Fields configuration
+  const fields = [
+    { name: 'title', type: 'text', placeholder: '標題', required: true },
+    { name: 'type', type: 'select', placeholder: '選擇類型', required: true, options: [
+      { value: 'autobiography', label: '自傳' },
+      { value: 'education', label: '學歷' },
+      { value: 'experience', label: '經驗' }
+    ]},
+    { name: 'content', type: 'content', placeholder: '請輸入內容...' }
+  ];
+
+  // Fetch data
+  const fetchAboutMe = useCallback(async () => {
+    try {
+      setLoading(true);
+      const data = await getAboutMe();
+      setAboutMeContent(data);
+    } catch (error) {
+      addMessage(error.message, 'error');
+    } finally {
+      setLoading(false);
+    }
+  }, [addMessage]);
 
   useEffect(() => {
     fetchAboutMe();
-  }, []);
+  }, [fetchAboutMe]);
 
-  const fetchAboutMe = async () => {
-    try {
-      const data = await getAboutMe();
-      setAboutMeContent(data);
-      setLoading(false);
-    } catch (error) {
-      setError(error.message);
-      setLoading(false);
-    }
-  };
-
-  const handleCreate = async () => {
-    setCurrentItem({ title: '', subtitle: '', content: '', date: new Date() });
-    setEditorContent('');
+  // Event handlers
+  const handleCreate = () => {
+    setCurrentItem({ title: '', subtitle: '', content: '', date: new Date(), type: '' });
+    setSelectedType('');
     setIsEditing(true);
   };
 
-  const handleUpdate = async (id) => {
-    const updatedItem = { ...currentItem, content: editorContent };
+  const handleEdit = (item) => {
+    setCurrentItem(item);
+    setSelectedType(item.type);
+    setIsEditing(true);
+  };
+
+  const handleSave = async (data) => {
     try {
-      await updateAboutMe(id, updatedItem);
+      setLoading(true);
+      if (currentItem._id) {
+        await updateAboutMe(currentItem._id, data);
+      } else {
+        await createAboutMe(data);
+      }
       await fetchAboutMe();
-      setIsEditing(false);
-      setCurrentItem(null);
+      resetEditingState();
+      addMessage(currentItem._id ? '內容已成功更新' : '新內容已成功創建', 'success');
     } catch (error) {
-      setError(error.message);
+      addMessage(error.message, 'error');
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleDelete = async (id) => {
     try {
+      setLoading(true);
       await deleteAboutMe(id);
       await fetchAboutMe();
+      addMessage('內容已成功刪除', 'success');
     } catch (error) {
-      setError(error.message);
+      addMessage(error.message, 'error');
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleEdit = (item) => {
-    setCurrentItem(item);
-    setEditorContent(item.content);
-    setIsEditing(true);
+  // Helper functions
+  const resetEditingState = () => {
+    setIsEditing(false);
+    setCurrentItem(null);
+    setSelectedType('');
   };
 
-  const handleSave = async () => {
-    try {
-      const formData = new FormData();
-      formData.append('title', currentItem.title);
-      formData.append('subtitle', currentItem.subtitle);
-      formData.append('content', editorContent);
-      formData.append('date', currentItem.date);
-      if (currentItem.file) {
-        formData.append('image', currentItem.file);
-      }
+  // Render methods
+  const renderAutobiography = () => (
+    <Section>
+      <SectionTitle>自傳</SectionTitle>
+      <AutobiographyContainer>
+        {aboutMeContent.autobiography.map((item, index) => (
+          <AutobiographyCard key={item._id} delay={index * 0.1}>
+            {item.imageUrl && <CardImage src={item.imageUrl} alt={item.title} />}
+            <CardContent>
+              <h3>{item.title}</h3>
+              <div dangerouslySetInnerHTML={{ __html: item.content }} />
+              <ButtonGroup>
+                <EditButton onClick={() => handleEdit(item)}>編輯</EditButton>
+                <DeleteButton onClick={() => handleDelete(item._id)}>刪除</DeleteButton>
+              </ButtonGroup>
+            </CardContent>
+          </AutobiographyCard>
+        ))}
+      </AutobiographyContainer>
+    </Section>
+  );
 
-      if (currentItem._id) {
-        await updateAboutMe(currentItem._id, formData);
-      } else {
-        await createAboutMe(formData);
-      }
-      await fetchAboutMe();
-      setIsEditing(false);
-      setCurrentItem(null);
-    } catch (error) {
-      setError(error.message);
-    }
-  };
+  const renderEducation = () => (
+    <Section>
+      <SectionTitle>學歷</SectionTitle>
+      <Timeline>
+        {aboutMeContent.education.map((item, index) => (
+          <TimelineItem
+            key={item._id}
+            {...item}
+            isLeft={index % 2 === 0}
+            onEdit={() => handleEdit(item)}
+            onDelete={() => handleDelete(item._id)}
+          />
+        ))}
+      </Timeline>
+    </Section>
+  );
 
-  if (loading) {
+  const renderExperience = () => (
+    <Section>
+      <SectionTitle>經驗</SectionTitle>
+      <ExperienceContainer>
+        {aboutMeContent.experience.map((item, index) => (
+          <ExperienceCard key={item._id} delay={index * 0.1}>
+            {item.imageUrl && <CardImage src={item.imageUrl} alt={item.title} />}
+            <CardContent>
+              <h3>{item.title}</h3>
+              <p>{item.subtitle}</p>
+              <div dangerouslySetInnerHTML={{ __html: item.content }} />
+              <ButtonGroup>
+                <EditButton onClick={() => handleEdit(item)}>編輯</EditButton>
+                <DeleteButton onClick={() => handleDelete(item._id)}>刪除</DeleteButton>
+              </ButtonGroup>
+            </CardContent>
+          </ExperienceCard>
+        ))}
+      </ExperienceContainer>
+    </Section>
+  );
+
+  if (loading ) {
     return <Loading />;
   }
 
@@ -93,81 +167,29 @@ const AdminAboutMe = () => {
     <AdminContainer>
       <AdminHeader>
         <h1>About Me 管理</h1>
-        {!isEditing && <AddButton onClick={handleCreate}>新增資料</AddButton>}
+        <AddButton onClick={handleCreate}>新增個人資料</AddButton>
       </AdminHeader>
-      {error && <ErrorMessage>{error}</ErrorMessage>}
-      <Timeline>
-        {aboutMeContent.map((item, index) => (
-          <TimelineItem
-            key={item._id}
-            id={item._id}
-            date={item.date}
-            subtitle={item.subtitle}
-            content={item.content}
-            fileUrl={item.imageUrl}
-            isLeft={index % 2 === 0}
-            onEdit={() => handleEdit(item)}
-            onDelete={() => handleDelete(item._id)}
-          />
-        ))}
-      </Timeline>
+
+      {renderAutobiography()}
+      {renderEducation()}
+      {renderExperience()}
+
       {isEditing && (
-        <EditorContainer>
-          <Input
-            type="text"
-            value={currentItem.title}
-            onChange={(e) => setCurrentItem({ ...currentItem, title: e.target.value })}
-            placeholder="標題"
-          />
-          <Input
-            type="text"
-            value={currentItem.subtitle}
-            onChange={(e) => setCurrentItem({ ...currentItem, subtitle: e.target.value })}
-            placeholder="副標題"
-          />
-          <TextEditor value={editorContent} onChange={setEditorContent} />
-          <input
-            type="file"
-            onChange={(e) => setCurrentItem({ ...currentItem, file: e.target.files[0] })}
-          />
-          <ButtonGroup>
-            <SaveButton onClick={handleSave}>保存</SaveButton>
-            <CancelButton onClick={() => setIsEditing(false)}>取消</CancelButton>
-          </ButtonGroup>
-        </EditorContainer>
+        <TextEditor
+          initialData={currentItem}
+          onSave={handleSave}
+          onCancel={resetEditingState}
+          fields={fields}
+        />
       )}
     </AdminContainer>
   );
 };
 
-const TimelineItem = ({ id, date, subtitle, content, fileUrl, isLeft, onEdit, onDelete }) => {
-  const { ref, inView } = useInView({ triggerOnce: true, threshold: 0.1 });
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-
-  return (
-    <StyledTimelineItem ref={ref} inView={inView} isLeft={isLeft}>
-      <TimelineContent isLeft={isLeft}>
-        <TimelineImageWrapper isLeft={isLeft}>
-          <TimelineImage src={fileUrl} alt={subtitle} />
-        </TimelineImageWrapper>
-        <TimelineTextContent>
-          <TimelineSubtitle>{subtitle}</TimelineSubtitle>
-          <TimelineText dangerouslySetInnerHTML={{ __html: content }} />
-          <TimelineDate>{new Date(date).toLocaleDateString()}</TimelineDate>
-        </TimelineTextContent>
-        <MenuContainer>
-          <MenuButton onClick={() => setIsMenuOpen(!isMenuOpen)}>⋮</MenuButton>
-          {isMenuOpen && (
-            <Menu>
-              <MenuItem onClick={onEdit}>編輯</MenuItem>
-              <MenuItem onClick={onDelete}>刪除</MenuItem>
-            </Menu>
-          )}
-        </MenuContainer>
-      </TimelineContent>
-    </StyledTimelineItem>
-  );
-};
+const fadeIn = keyframes`
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+`;
 
 const AdminContainer = styled.div`
   padding: 50px;
@@ -187,6 +209,15 @@ const AdminHeader = styled.div`
   }
 `;
 
+const Section = styled.div`
+  margin-bottom: 50px;
+`;
+
+const SectionTitle = styled.h2`
+  color: #8b5e3c;
+  margin-bottom: 20px;
+`;
+
 const Timeline = styled.div`
   position: relative;
   max-width: 1000px;
@@ -204,128 +235,59 @@ const Timeline = styled.div`
   }
 `;
 
-const slideIn = keyframes`
-  from {
-    opacity: 0;
-    transform: translateY(50px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+const AutobiographyContainer = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  justify-content: center;
 `;
 
-const StyledTimelineItem = styled.div`
-  padding: 20px 0;
-  position: relative;
-  width: 50%;
-  opacity: ${({ inView }) => (inView ? 1 : 0)};
-  transform: ${({ inView }) => (inView ? 'none' : 'translateY(50px)')};
-  animation: ${({ inView }) => (inView ? slideIn : 'none')} 0.6s ease-out;
-  margin-left: ${({ isLeft }) => (isLeft ? '0' : '50%')};
+const ExperienceContainer = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 20px;
 `;
 
-const TimelineContent = styled.div`
-  padding: 20px;
+const Card = styled.div`
   background-color: #fffaf0;
-  position: relative;
   border-radius: 8px;
+  overflow: hidden;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s ease;
+  animation: ${fadeIn} 0.5s ease forwards;
+  animation-delay: ${props => props.delay}s;
+  opacity: 0;
+
+  &:hover {
+    transform: translateY(-5px);
+  }
+`;
+
+const AutobiographyCard = styled(Card)`
+  flex: 1 1 300px;
+  max-width: 400px;
+`;
+
+const ExperienceCard = styled(Card)`
   display: flex;
   flex-direction: column;
-  margin: ${({ isLeft }) => (isLeft ? '0 50px 0 0' : '0 0 0 50px')};
-
-  &:after {
-    content: '';
-    position: absolute;
-    width: 20px;
-    height: 20px;
-    ${({ isLeft }) => (isLeft ? 'right: -60px;' : 'left: -60px;')}
-    background-color: #d48c2e;
-    border: 4px solid #fffaf0;
-    top: 20px;
-    border-radius: 50%;
-    z-index: 1;
-  }
 `;
 
-const TimelineImageWrapper = styled.div`
-  position: absolute;
-  ${({ isLeft }) => (isLeft ? 'left: -75px;' : 'right: -75px;')}
-  top: 10px;
-`;
-
-const TimelineImage = styled.img`
-  width: 80px;
-  height: 80px;
+const CardImage = styled.img`
+  width: 100%;
+  height: 200px;
   object-fit: cover;
-  border-radius: 50%;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 `;
 
-const TimelineTextContent = styled.div`
-  flex: 1;
+const CardContent = styled.div`
+  padding: 20px;
 `;
 
-const TimelineSubtitle = styled.h4`
-  margin: 0 0 10px 0;
-  color: #8b5e3c;
-  font-size: 1.2rem;
-`;
-
-const TimelineText = styled.div`
-  margin: 0 0 15px 0;
-  color: #7a5533;
-  font-size: 1rem;
-  line-height: 1.5;
-`;
-
-const TimelineDate = styled.p`
-  margin: 0;
-  color: #d48c2e;
-  font-size: 0.9rem;
-  font-style: italic;
-`;
-
-const MenuContainer = styled.div`
-  position: absolute;
-  top: 10px;
-  right: 10px;
-`;
-
-const MenuButton = styled.button`
-  background: none;
-  border: none;
-  font-size: 1.5rem;
-  color: #8b5e3c;
-  cursor: pointer;
-  transition: color 0.3s ease;
-
-  &:hover {
-    color: #d48c2e;
-  }
-`;
-
-const Menu = styled.div`
-  position: absolute;
-  top: 30px;
-  right: 0;
-  background-color: #fffaf0;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-  border-radius: 5px;
-  overflow: hidden;
-  z-index: 10;
-`;
-
-const MenuItem = styled.div`
-  padding: 10px 20px;
-  cursor: pointer;
-  transition: background-color 0.3s ease, color 0.3s ease;
-
-  &:hover {
-    background-color: #d48c2e;
-    color: white;
-  }
+const ButtonGroup = styled.div`
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 20px;
+  gap: 10px;
 `;
 
 const Button = styled.button`
@@ -354,52 +316,22 @@ const AddButton = styled(Button)`
   }
 `;
 
-const EditorContainer = styled.div`
-  margin-top: 30px;
-  width: 100%;
-  max-width: 1000px;
-  padding: 20px;
-  background-color: #fffaf0;
-  border-radius: 15px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-`;
-
-const ButtonGroup = styled.div`
-  display: flex;
-  justify-content: flex-end;
-  margin-top: 20px;
-  gap: 10px;
-`;
-
-const SaveButton = styled(Button)`
-  background-color: #8b5e3c;
-  color: #fff;
+const EditButton = styled(Button)`
+  background-color: #4caf50;
+  color: white;
 
   &:hover {
-    background-color: #7a5533;
+    background-color: #45a049;
   }
 `;
 
-const CancelButton = styled(Button)`
-  background-color: #d48c2e;
-  color: #fff;
+const DeleteButton = styled(Button)`
+  background-color: #f44336;
+  color: white;
 
   &:hover {
-    background-color: #b37524;
+    background-color: #da190b;
   }
-`;
-
-const ErrorMessage = styled.div`
-  color: red;
-  margin-bottom: 20px;
-`;
-
-const Input = styled.input`
-  width: 100%;
-  padding: 10px;
-  margin-bottom: 10px;
-  border: 1px solid #d48c2e;
-  border-radius: 5px;
 `;
 
 export default AdminAboutMe;

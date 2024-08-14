@@ -1,65 +1,26 @@
-const API_URL = process.env.REACT_APP_API_URL;
+// api/blogApi.js
+import { apiCall } from '../api/common/apiCall'
 
-export const fetchBlogs = async () => {
-  const response = await fetch(`${API_URL}/blog`);
-  if (!response.ok) {
-    throw new Error('Network response was not ok');
-  }
-  return await response.json();
-};
+// 獲取所有博客（帶分頁和搜索）
+export const fetchBlogs = (page, limit, search) => 
+  apiCall('/blog', 'GET', { page, limit, search });
 
-export const createBlog = async (blogData) => {
-  const response = await fetch(`${API_URL}/blog`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(blogData),
-  });
-  if (!response.ok) {
-    throw new Error('Network response was not ok');
-  }
-  return await response.json();
-};
+// 創建博客
+export const createBlog = (blogData) => 
+  apiCall('/admin/blog', 'POST', blogData, blogData instanceof FormData);
 
-export const getBlogById = async (id) => {
-  const response = await fetch(`${API_URL}/blog/${id}`);
-  if (!response.ok) {
-    throw new Error('Network response was not ok');
-  }
-  return await response.json();
-};
+// 獲取單個博客
+export const getBlogById = (id) => 
+  apiCall(`/blog/${id}`, 'GET');
 
-export const updateBlog = async (id, blogData) => {
-  const response = await fetch(`${API_URL}/blog/${id}`, {
-    method: 'PUT',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(blogData),
-  });
-  if (!response.ok) {
-    throw new Error('Network response was not ok');
-  }
-  return await response.json();
-};
+// 更新博客
+export const updateBlog = (id, blogData) => 
+  apiCall(`/admin/blog/${id}`, 'PUT', blogData);
 
-export const deleteBlog = async (id) => {
-  const response = await fetch(`${API_URL}/blog/${id}`, {
-    method: 'DELETE',
-  });
-  if (!response.ok) {
-    throw new Error('Network response was not ok');
-  }
-  return response;
-};
+// 刪除博客
+export const deleteBlog = (id) => 
+  apiCall(`/admin/blog/${id}`, 'DELETE');
 
-export const restoreBlog = async (id) => {
-  const response = await fetch(`${API_URL}/blog/${id}/restore`, {
-    method: 'POST',
-  });
-  if (!response.ok) {
-    throw new Error('Network response was not ok');
-  }
-  return await response.json();
-};
+// 恢復博客
+export const restoreBlog = (id) => 
+  apiCall(`/admin/blog/${id}/restore`, 'POST');

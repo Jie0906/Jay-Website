@@ -1,93 +1,146 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import styled, { keyframes } from 'styled-components';
 import { FaEdit, FaTrash, FaPlus } from 'react-icons/fa';
 import { useInView } from 'react-intersection-observer';
 import { getAllProjects, createProject, updateProject, deleteProject } from '../../../api/projectApi';
 import TextEditor from '../../../components/common/TextEditor';
+import Loading from '../../../components/common/Loading';
+import { useMessage } from '../../../components/common/MessagePopup';
 
 const AdminProject = () => {
+  // State management
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [editingProject, setEditingProject] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
+  const [currentProject, setCurrentProject] = useState(null);
+  const { addMessage } = useMessage();
+
+  // Fields configuration
+  const fields = [
+    { name: 'title', type: 'text', placeholder: '項目標題', required: true },
+    { name: 'date', type: 'date', required: true },
+    { name: 'content', type: 'content', placeholder: '項目內容' },
+    { name: 'image', type: 'file', accept: 'image/*' }
+  ];
+
+  // Fetch data
+  const fetchProjects = useCallback(async () => {
+    try {
+      setLoading(true);
+      const data = await getAllProjects();
+      setProjects(data);
+    } catch (error) {
+      addMessage(error.message, 'error');
+    } finally {
+      setLoading(false);
+    }
+  }, [addMessage]);
 
   useEffect(() => {
     fetchProjects();
-  }, []);
+  }, [fetchProjects]);
 
-  const fetchProjects = async () => {
-    try {
-      const data = await getAllProjects();
-      setProjects(data);
-      setLoading(false);
-    } catch (error) {
-      setError(error.message);
-      setLoading(false);
-    }
+  // Event handlers
+  const handleCreate = () => {
+    setCurrentProject({ title: '', content: '', date: new Date() });
+    setIsEditing(true);
   };
 
   const handleEdit = (project) => {
-    setEditingProject(project);
+    setCurrentProject(project);
     setIsEditing(true);
+  };
+
+  const handleSave = async (data, isFormData) => {
+    try {
+      setLoading(true);
+      let dataToSend = prepareDataForSending(data, isFormData);
+      let updatedProject;
+      if (currentProject._id) {
+        updatedProject = await updateProject(currentProject._id, dataToSend);
+      } else {
+        updatedProject = await createProject(dataToSend);
+      }
+      await fetchProjects();
+      resetEditingState();
+      addMessage(currentProject._id ? '項目已成功更新' : '新項目已成功創建', 'success');
+    } catch (error) {
+      addMessage(error.message, 'error');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleDelete = async (id) => {
     try {
+      setLoading(true);
       await deleteProject(id);
-      setProjects(projects.filter(project => project._id !== id));
+      await fetchProjects();
+      addMessage('項目已成功刪除', 'success');
     } catch (error) {
-      setError(error.message);
+      addMessage(error.message, 'error');
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleSave = async (projectData) => {
-    try {
-      if (editingProject) {
-        const updatedProject = await updateProject(editingProject._id, projectData);
-        setProjects(projects.map(project => 
-          project._id === editingProject._id ? updatedProject : project
-        ));
-      } else {
-        const newProject = await createProject(projectData);
-        setProjects([...projects, newProject]);
-      }
-      setIsEditing(false);
-      setEditingProject(null);
-    } catch (error) {
-      setError(error.message);
-    }
+  // Helper functions
+  const resetEditingState = () => {
+    setIsEditing(false);
+    setCurrentProject(null);
   };
 
-  if (loading) return <LoadingScreen>Loading...</LoadingScreen>;
-  if (error) return <ErrorMessage>{error}</ErrorMessage>;
+  const prepareDataForSending = (data, isFormData) => {
+    if (isFormData) return data;
+    if (data.image instanceof File) {
+      const formData = new FormData();
+      Object.keys(data).forEach(key => {
+        formData.append(key, data[key]);
+      });
+      return formData;
+    }
+    return data;
+  };
+
+  // Render methods
+  const renderProjects = () => (
+    <ProjectList>
+      {projects.map((project) => (
+        <ProjectItem
+          key={project._id}
+          project={project}
+          onEdit={handleEdit}
+          onDelete={handleDelete}
+          disabled={loading}
+        />
+      ))}
+    </ProjectList>
+  );
+
+  if (loading && projects.length === 0) {
+    return <Loading />;
+  }
 
   return (
     <AdminContainer>
-      <Header>
-        <Title>Manage Projects</Title>
-        <AddButton onClick={() => setIsEditing(true)}><FaPlus /> Add New Project</AddButton>
-      </Header>
-      <ProjectList>
-        {projects.map((project) => (
-          <ProjectItem 
-            key={project._id} 
-            project={project} 
-            onEdit={handleEdit}
-            onDelete={handleDelete}
-          />
-        ))}
-      </ProjectList>
+      <AdminHeader>
+        <h1>Projects 管理</h1>
+        <AddButton onClick={handleCreate} disabled={loading}>
+          <FaPlus /> 添加新專案
+        </AddButton>
+      </AdminHeader>
+
+      {renderProjects()}
+
       {isEditing && (
         <EditorOverlay>
           <EditorContainer>
-            <ProjectEditor 
-              project={editingProject} 
+            <TextEditor
+              initialData={currentProject}
               onSave={handleSave}
-              onCancel={() => {
-                setIsEditing(false);
-                setEditingProject(null);
-              }}
+              onCancel={resetEditingState}
+              fields={fields}
+              useFormData={true}
             />
           </EditorContainer>
         </EditorOverlay>
@@ -96,7 +149,8 @@ const AdminProject = () => {
   );
 };
 
-const ProjectItem = ({ project, onEdit, onDelete }) => {
+// Sub-components
+const ProjectItem = ({ project, onEdit, onDelete, disabled }) => {
   const { ref, inView } = useInView({
     triggerOnce: true,
     threshold: 0.1,
@@ -104,85 +158,24 @@ const ProjectItem = ({ project, onEdit, onDelete }) => {
 
   return (
     <StyledProjectItem ref={ref} inView={inView}>
-      <ProjectImage src={project.image || 'https://via.placeholder.com/150'} alt={project.title} />
+      {project.imageUrl && <ProjectImage src={project.imageUrl} alt={project.title} />}
       <ProjectContent>
-        <ProjectTitle>{project.title}</ProjectTitle>
-        <ProjectDate>{new Date(project.date).toLocaleDateString()}</ProjectDate>
-        <ProjectDescription>{project.content.substring(0, 100)}...</ProjectDescription>
+        <ProjectTitle>{project.title || 'Untitled Project'}</ProjectTitle>
+        <ProjectDate>{project.date ? new Date(project.date).toLocaleDateString() : 'No date'}</ProjectDate>
+        <ProjectDescription dangerouslySetInnerHTML={{ __html: project.content ? project.content.substring(0, 100) + '...' : '' }} />
       </ProjectContent>
       <ActionButtons>
-        <ActionButton onClick={() => onEdit(project)}><FaEdit /></ActionButton>
-        <ActionButton onClick={() => onDelete(project._id)}><FaTrash /></ActionButton>
+        <ActionButton onClick={() => onEdit(project)} disabled={disabled}><FaEdit /></ActionButton>
+        <ActionButton onClick={() => onDelete(project._id)} disabled={disabled}><FaTrash /></ActionButton>
       </ActionButtons>
     </StyledProjectItem>
   );
 };
 
-const ProjectEditor = ({ project, onSave, onCancel }) => {
-  const [editedProject, setEditedProject] = useState(project || { title: '', content: '', date: new Date() });
-  const [file, setFile] = useState(null);
-
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setEditedProject(prev => ({ ...prev, [name]: value }));
-  };
-
-  const handleContentChange = (content) => {
-    setEditedProject(prev => ({ ...prev, content }));
-  };
-
-  const handleFileChange = (e) => {
-    setFile(e.target.files[0]);
-  };
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    const formData = new FormData();
-    formData.append('title', editedProject.title);
-    formData.append('content', editedProject.content);
-    formData.append('date', editedProject.date);
-    if (file) {
-      formData.append('image', file);
-    }
-    onSave(formData);
-  };
-
-  return (
-    <EditorForm onSubmit={handleSubmit}>
-      <Input
-        type="text"
-        name="title"
-        value={editedProject.title}
-        onChange={handleInputChange}
-        placeholder="Project Title"
-        required
-      />
-      <Input
-        type="date"
-        name="date"
-        value={editedProject.date}
-        onChange={handleInputChange}
-        required
-      />
-      <TextEditor value={editedProject.content} onChange={handleContentChange} />
-      <Input type="file" onChange={handleFileChange} />
-      <ButtonGroup>
-        <SubmitButton type="submit">Save</SubmitButton>
-        <CancelButton type="button" onClick={onCancel}>Cancel</CancelButton>
-      </ButtonGroup>
-    </EditorForm>
-  );
-};
-
 // Styled components
 const fadeIn = keyframes`
-  from { opacity: 0; }
-  to { opacity: 1; }
-`;
-
-const slideIn = keyframes`
-  from { transform: translateY(20px); opacity: 0; }
-  to { transform: translateY(0); opacity: 1; }
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
 `;
 
 const AdminContainer = styled.div`
@@ -191,33 +184,15 @@ const AdminContainer = styled.div`
   min-height: 100vh;
 `;
 
-const Header = styled.div`
+const AdminHeader = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 30px;
-`;
 
-const Title = styled.h1`
-  color: #6b4226;
-  font-size: 2.5rem;
-`;
-
-const AddButton = styled.button`
-  padding: 10px 20px;
-  background-color: #8b5a2b;
-  color: white;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-  font-size: 1rem;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  transition: background-color 0.3s;
-
-  &:hover {
-    background-color: #6b4226;
+  h1 {
+    margin: 0;
+    color: #8b5e3c;
   }
 `;
 
@@ -236,7 +211,7 @@ const StyledProjectItem = styled.div`
   transition: all 0.3s ease;
   opacity: ${props => props.inView ? 1 : 0};
   transform: ${props => props.inView ? 'translateY(0)' : 'translateY(20px)'};
-  animation: ${slideIn} 0.5s ease-out;
+  animation: ${fadeIn} 0.5s ease forwards;
 
   &:hover {
     transform: translateY(-5px);
@@ -266,7 +241,7 @@ const ProjectDate = styled.p`
   margin: 0 0 10px 0;
 `;
 
-const ProjectDescription = styled.p`
+const ProjectDescription = styled.div`
   color: #4a3520;
   font-size: 1rem;
   line-height: 1.4;
@@ -279,6 +254,32 @@ const ActionButtons = styled.div`
   padding: 10px;
 `;
 
+const Button = styled.button`
+  padding: 10px 20px;
+  border: none;
+  border-radius: 5px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background-color 0.3s ease, transform 0.1s ease;
+
+  &:hover {
+    transform: translateY(-2px);
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
+`;
+
+const AddButton = styled(Button)`
+  background-color: #8b5e3c;
+  color: #fff;
+
+  &:hover {
+    background-color: #7a5533;
+  }
+`;
+
 const ActionButton = styled.button`
   background: none;
   border: none;
@@ -287,6 +288,8 @@ const ActionButton = styled.button`
   font-size: 1.2rem;
   margin: 5px 0;
   transition: color 0.3s;
+  opacity: ${props => props.disabled ? 0.5 : 1};
+  cursor: ${props => props.disabled ? 'not-allowed' : 'pointer'};
 
   &:hover {
     color: #6b4226;
@@ -304,7 +307,6 @@ const EditorOverlay = styled.div`
   justify-content: center;
   align-items: center;
   z-index: 1000;
-  animation: ${fadeIn} 0.3s ease-out;
 `;
 
 const EditorContainer = styled.div`
@@ -315,69 +317,6 @@ const EditorContainer = styled.div`
   max-width: 800px;
   max-height: 90vh;
   overflow-y: auto;
-  animation: ${slideIn} 0.3s ease-out;
-`;
-
-const EditorForm = styled.form`
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-`;
-
-const Input = styled.input`
-  padding: 10px;
-  border: 1px solid #d3b08c;
-  border-radius: 5px;
-  font-size: 1rem;
-`;
-
-const ButtonGroup = styled.div`
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-`;
-
-const Button = styled.button`
-  padding: 10px 20px;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-  font-size: 1rem;
-  transition: background-color 0.3s;
-`;
-
-const SubmitButton = styled(Button)`
-  background-color: #8b5a2b;
-  color: white;
-
-  &:hover {
-    background-color: #6b4226;
-  }
-`;
-
-const CancelButton = styled(Button)`
-  background-color: #d3b08c;
-  color: #4a3520;
-
-  &:hover {
-    background-color: #c19a6b;
-  }
-`;
-
-const LoadingScreen = styled.div`
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 100vh;
-  font-size: 1.5rem;
-  color: #6b4226;
-`;
-
-const ErrorMessage = styled.div`
-  color: #ff0000;
-  text-align: center;
-  padding: 20px;
-  font-size: 1.2rem;
 `;
 
 export default AdminProject;

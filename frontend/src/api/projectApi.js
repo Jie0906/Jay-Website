@@ -1,69 +1,15 @@
-const API_URL = process.env.REACT_APP_API_URL;
+import { apiCall } from '../api/common/apiCall';
 
-export const getAllProjects = async () => {
-  const response = await fetch(`${API_URL}/project`);
-  if (!response.ok) {
-    throw new Error('Network response was not ok');
-  }
-  return await response.json();
-};
+export const getAllProjects = () => apiCall('/project', 'GET');
 
-export const getProjectById = async (id) => {
-  const response = await fetch(`${API_URL}/project/${id}`);
-  if (!response.ok) {
-    throw new Error('Network response was not ok');
-  }
-  return await response.json();
-};
+export const getProjectById = (id) => apiCall(`/project/${id}`, 'GET');
 
-export const createProject = async (projectData) => {
-  const formData = new FormData();
-  for (const key in projectData) {
-    formData.append(key, projectData[key]);
-  }
+export const createProject = (projectData) => 
+  apiCall('/admin/project', 'POST', projectData, projectData instanceof FormData);
 
-  const response = await fetch(`${API_URL}/project`, {
-    method: 'POST',
-    body: formData,
-  });
-  if (!response.ok) {
-    throw new Error('Network response was not ok');
-  }
-  return await response.json();
-};
+export const updateProject = (id, projectData) => 
+  apiCall(`/admin/project/${id}`, 'PUT', projectData, projectData instanceof FormData);
 
-export const updateProject = async (id, projectData) => {
-  const formData = new FormData();
-  for (const key in projectData) {
-    formData.append(key, projectData[key]);
-  }
+export const deleteProject = (id) => apiCall(`/admin/project/${id}`, 'DELETE');
 
-  const response = await fetch(`${API_URL}/project/${id}`, {
-    method: 'PUT',
-    body: formData,
-  });
-  if (!response.ok) {
-    throw new Error('Network response was not ok');
-  }
-  return await response.json();
-};
-
-export const deleteProject = async (id) => {
-  const response = await fetch(`${API_URL}/project/${id}`, {
-    method: 'DELETE',
-  });
-  if (!response.ok) {
-    throw new Error('Network response was not ok');
-  }
-  return response;
-};
-
-export const restoreProject = async (id) => {
-  const response = await fetch(`${API_URL}/project/${id}/restore`, {
-    method: 'POST',
-  });
-  if (!response.ok) {
-    throw new Error('Network response was not ok');
-  }
-  return await response.json();
-};
+export const restoreProject = (id) => apiCall(`/admin/project/${id}/restore`, 'POST');

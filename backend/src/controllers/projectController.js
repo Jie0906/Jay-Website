@@ -6,21 +6,23 @@ class ProjectController {
         try{
             const { title, content, date } = req.body
             if (!title || !content || !date ){
-                const error = new Error('Field cannot be empty.')
+                const error = new Error('Required fields cannot be empty.')
                 error.status = 400
                 throw error
             }
             let infor = {
-                title: title,
-                content : content, 
-                date : date
+                title,
+                content,
+                date 
             }
             if (req.file) {
-              infor.image = req.file.path; 
+              infor.imagePath = req.filePath;
+              infor.imageUrl = req.fileUrl; 
           }
-            await Project.create(infor)
+            const newProject = await Project.create(infor)
             return res.status(201).json({
-                message: 'Created new project successfully!'
+                message: 'Created new project successfully!',
+                newProject
               });
         }
         catch (error) {
