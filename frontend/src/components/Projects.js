@@ -1,124 +1,208 @@
-// src/components/Projects.js
-import React, { useEffect, useState } from 'react';
-import styled from 'styled-components';
-import { FaHeart, FaShareAlt, FaComment } from 'react-icons/fa';
+import React, { useEffect, useState, useCallback } from 'react';
+import styled, { keyframes, createGlobalStyle } from 'styled-components';
 import { useInView } from 'react-intersection-observer';
 import { getAllProjects } from '../api/projectApi';
+import Loading from '../components/common/Loading';
 
-const ProjectItemComponent = ({ project }) => {
-  const { ref, inView } = useInView({ triggerOnce: true });
-
-  return (
-    <ProjectItem ref={ref} style={{ opacity: inView ? 1 : 0.5 }}>
-      <ProjectHeader>
-        <ProjectTitle>{project.title}</ProjectTitle>
-        <ProjectDate>{new Date(project.date).toLocaleDateString()}</ProjectDate>
-      </ProjectHeader>
-      <ProjectFooter>
-        <IconButton><FaHeart /></IconButton>
-        <IconButton><FaShareAlt /></IconButton>
-        <IconButton><FaComment /></IconButton>
-      </ProjectFooter>
-    </ProjectItem>
-  );
-};
-
-const Projects = () => {
-  const [projects, setProjects] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-
-  useEffect(() => {
-    const fetchProjects = async () => {
-      try {
-        const data = await getAllProjects();
-        console.log(data);
-        setProjects(data);
-        setLoading(false);
-      } catch (error) {
-        setError(error);
-        setLoading(false);
-      }
-    };
-
-    fetchProjects();
-  }, []);
-
-  if (loading) {
-    return <div>Loading...</div>;
-  }
-
-  if (error) {
-    return <div>Error: {error.message}</div>;
-  }
-
-  return (
-    <ProjectsContainer>
-      {projects.map((project) => (
-        <ProjectItemComponent key={project._id} project={project} />
-      ))}
-    </ProjectsContainer>
-  );
-};
-
-
-
-const ProjectsContainer = styled.div`
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 50px;
-  background-color: #fef5e7;
-  min-height: 100vh;
-  box-sizing: border-box;
+const GlobalStyle = createGlobalStyle`
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@700&display=swap');
 `;
 
-const ProjectItem = styled.div`
-  background-color: #fffaf0;
-  border-radius: 15px;
-  padding: 20px;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+const Project = () => {
+  const [projects, setProjects] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetchProjects = useCallback(async () => {
+    try {
+      setLoading(true);
+      const data = await getAllProjects();
+      setProjects(data);
+    } catch (error) {
+      console.error('Failed to fetch projects:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchProjects();
+  }, [fetchProjects]);
+
+  if (loading && projects.length === 0) {
+    return <Loading />;
+  }
+
+  return (
+    <>
+      <GlobalStyle />
+      <ProjectContainer>
+        <ProjectHeader>
+          <HeaderTitle>作品集</HeaderTitle>
+          <HeaderUnderline />
+        </ProjectHeader>
+        <ProjectList>
+          {projects.map((project, index) => (
+            <ProjectItem key={project._id} project={project} index={index} />
+          ))}
+        </ProjectList>
+      </ProjectContainer>
+    </>
+  );
+};
+
+const ProjectItem = ({ project, index }) => {
+  const { ref, inView } = useInView({
+    triggerOnce: true,
+    threshold: 0.1,
+  });
+
+  return (
+    <StyledProjectItem ref={ref} inView={inView} index={index}>
+      <ProjectImageWrapper>
+        <ProjectImage src={project.imageUrl || '/placeholder-image.jpg'} alt={project.title} />
+      </ProjectImageWrapper>
+      <ProjectContent>
+        <ProjectTitle>{project.title || 'Untitled Project'}</ProjectTitle>
+        <ProjectDate>{project.date ? new Date(project.date).toLocaleDateString() : 'No date'}</ProjectDate>
+        <ProjectDescription dangerouslySetInnerHTML={{ __html: project.content }} />
+      </ProjectContent>
+    </StyledProjectItem>
+  );
+};
+
+// Animations
+const fadeInUp = keyframes`
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+`;
+
+const expandWidth = keyframes`
+  from {
+    width: 0;
+  }
+  to {
+    width: 100px;
+  }
+`;
+
+// Styled components
+const ProjectContainer = styled.div`
+  padding: 50px 0;
+  background-color: #f5e5d3;
   width: 100%;
-  max-width: 800px;
-  margin-bottom: 20px;
-  opacity: ${({ inView }) => (inView ? 1 : 0)};
-  transform: ${({ inView }) => (inView ? 'none' : 'translateY(100px)')};
-  transition: opacity 0.6s ease-out, transform 0.6s ease-out;
 `;
 
 const ProjectHeader = styled.div`
+  text-align: center;
+  margin-bottom: 50px;
   display: flex;
-  justify-content: space-between;
+  flex-direction: column;
   align-items: center;
 `;
 
-const ProjectTitle = styled.h3`
-  margin: 0;
-  color: #8b5e3c;
+const HeaderTitle = styled.h1`
+  color: #4a3520;
+  font-size: 3rem;
+  font-family: 'Noto Serif TC', serif;
+  font-weight: 700;
+  margin-bottom: 10px;
+  animation: ${fadeInUp} 0.6s ease-out;
 `;
 
-const ProjectDate = styled.span`
-  color: #7a5533;
+const HeaderUnderline = styled.div`
+  height: 3px;
+  background-color: #8b5e3c;
+  animation: ${expandWidth} 0.8s ease-out forwards;
 `;
 
-const ProjectFooter = styled.div`
+const ProjectList = styled.div`
   display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-  margin-top: 20px;
+  flex-direction: column;
+  align-items: center;
+  gap: 40px;
+  width: 100%;
 `;
 
-const IconButton = styled.button`
-  background: none;
-  border: none;
-  cursor: pointer;
-  color: #7a5533;
-  font-size: 1.5rem;
-  transition: color 0.3s ease;
+const StyledProjectItem = styled.div`
+  display: flex;
+  background-color: #fffaf0;
+  border-radius: 15px;
+  overflow: hidden;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+  opacity: 0;
+  transform: translateY(20px);
+  animation: ${fadeInUp} 0.6s ease-out forwards;
+  animation-delay: ${props => props.index * 0.1}s;
+  width: 100%;
 
   &:hover {
-    color: #d48c2e;
+    transform: translateY(-5px);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+  }
+
+  @media (max-width: 768px) {
+    flex-direction: column;
   }
 `;
 
-export default Projects;
+const ProjectImageWrapper = styled.div`
+  flex: 0 0 350px;
+  height: 350px;
+  overflow: hidden;
+
+  @media (max-width: 1024px) {
+    flex: 0 0 300px;
+    height: 300px;
+  }
+
+  @media (max-width: 768px) {
+    flex: none;
+    height: 250px;
+  }
+`;
+
+const ProjectImage = styled.img`
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.3s ease;
+
+  ${StyledProjectItem}:hover & {
+    transform: scale(1.05);
+  }
+`;
+
+const ProjectContent = styled.div`
+  flex: 1;
+  padding: 30px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+`;
+
+const ProjectTitle = styled.h3`
+  color: #6b4226;
+  margin: 0 0 15px 0;
+  font-size: 1.8rem;
+`;
+
+const ProjectDate = styled.p`
+  color: #8b5a2b;
+  font-size: 1rem;
+  margin: 0 0 15px 0;
+`;
+
+const ProjectDescription = styled.div`
+  color: #4a3520;
+  font-size: 1.1rem;
+  line-height: 1.6;
+`;
+
+export default Project;

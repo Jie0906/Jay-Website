@@ -90,6 +90,91 @@ class BlogController {
       }
     };
 
+    // 获取所有博客（带分页和搜索）
+    getAllAdminBlogs = async (req, res, next) => {
+      try {
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        const search = req.query.search || '';
+
+        const query = {};
+        if (search) {
+          query.$or = [
+            { title: { $regex: search, $options: 'i' } },
+            { content: { $regex: search, $options: 'i' } }
+          ];
+        }
+
+        const totalPosts = await Blog.countDocuments(query);
+
+        if (totalPosts === 0) {
+          return res.status(200).json({
+            posts: [],
+            totalPages: 0,
+            currentPage: page
+          });
+        }
+
+        const posts = await Blog.find(query)
+          .sort({ date: -1 })
+          .limit(limit)
+          .skip((page - 1) * limit)
+          .select('+createdAt +updatedAt +deletedAt +deleted')
+          .exec();
+
+        const formattedPosts = posts.map(post => ({
+          ...post._doc,
+          isDeleted: post.deleted || false,
+          createdAt: post.createdAt ? post.createdAt.toISOString() : null,
+          updatedAt: post.updatedAt ? post.updatedAt.toISOString() : null,
+          deletedAt: post.deletedAt ? post.deletedAt.toISOString() : null
+        }));
+
+        res.status(200).json({
+          posts: formattedPosts,
+          totalPages: Math.ceil(totalPosts / limit),
+          currentPage: page
+        });
+      } catch (error) {
+        next(error);
+      }
+    };
+
+    // 获取单个博客
+    getAdminBlogById = async (req, res, next) => {
+      try {
+        const { id } = req.params;
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+          const error = new Error('Invalid ID');
+          error.status = 400;
+          throw error;
+        }
+        const post = await Blog.findOneWithDeleted({ _id: id });
+        
+        if (!post) {
+          const error = new Error('Post not found');
+          error.status = 404;
+          throw error;
+        }
+        
+        const formattedPost = {
+          id: post._id,
+          title: post.title,
+          category: post.category,
+          content: post.content,
+          date: post.date,
+          createdAt: post.createdAt,
+          updatedAt: post.updatedAt,
+          deleted: post.deleted,
+          deletedAt: post.deletedAt
+        };
+        
+        res.status(200).json(formattedPost);
+      } catch (error) {
+        next(error);
+      }
+    };
+
     updateBlog = async (req, res, next) => {
     try {
         const { title, content, category, date } = req.body;

@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import styled, { keyframes } from 'styled-components';
-import { getAboutMe, createAboutMe, updateAboutMe, deleteAboutMe } from '../../../api/aboutMeApi';
+import styled, { keyframes, css } from 'styled-components';
+import { getAllAdminAboutMe, createAboutMe, updateAboutMe, deleteAboutMe, restoreAboutMe } from '../../../api/aboutMeApi';
 import Loading from '../../common/Loading';
 import { useMessage } from '../../common/MessagePopup';
 import TimelineItem from '../../common/TimelineItem';
@@ -34,8 +34,9 @@ const AdminAboutMe = () => {
   const fetchAboutMe = useCallback(async () => {
     try {
       setLoading(true);
-      const data = await getAboutMe();
-      setAboutMeContent(data);
+      const data = await getAllAdminAboutMe();
+      console.log(data);
+      setAboutMeContent(data.content);
     } catch (error) {
       addMessage(error.message, 'error');
     } finally {
@@ -91,6 +92,19 @@ const AdminAboutMe = () => {
     }
   };
 
+  const handleRestore = async (id) => {
+    try {
+      setLoading(true);
+      await restoreAboutMe(id);
+      await fetchAboutMe();
+      addMessage('內容已成功恢復', 'success');
+    } catch (error) {
+      addMessage(error.message, 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Helper functions
   const resetEditingState = () => {
     setIsEditing(false);
@@ -104,14 +118,24 @@ const AdminAboutMe = () => {
       <SectionTitle>自傳</SectionTitle>
       <AutobiographyContainer>
         {aboutMeContent.autobiography.map((item, index) => (
-          <AutobiographyCard key={item._id} delay={index * 0.1}>
-            {item.imageUrl && <CardImage src={item.imageUrl} alt={item.title} />}
-            <CardContent>
+          <AutobiographyCard key={item._id} delay={index * 0.1} isDeleted={item.isDeleted}>
+            <CardContent isDeleted={item.isDeleted}>
               <h3>{item.title}</h3>
               <div dangerouslySetInnerHTML={{ __html: item.content }} />
+              <TimeInfo>
+                <p>創建時間: {new Date(item.createdAt).toLocaleString()}</p>
+                <p>更新時間: {new Date(item.updatedAt).toLocaleString()}</p>
+                {item.deletedAt && <p>刪除時間: {new Date(item.deletedAt).toLocaleString()}</p>}
+              </TimeInfo>
               <ButtonGroup>
-                <EditButton onClick={() => handleEdit(item)}>編輯</EditButton>
-                <DeleteButton onClick={() => handleDelete(item._id)}>刪除</DeleteButton>
+                {item.isDeleted ? (
+                  <RestoreButton onClick={() => handleRestore(item._id)}>恢復</RestoreButton>
+                ) : (
+                  <>
+                    <EditButton onClick={() => handleEdit(item)}>編輯</EditButton>
+                    <DeleteButton onClick={() => handleDelete(item._id)}>刪除</DeleteButton>
+                  </>
+                )}
               </ButtonGroup>
             </CardContent>
           </AutobiographyCard>
@@ -131,6 +155,12 @@ const AdminAboutMe = () => {
             isLeft={index % 2 === 0}
             onEdit={() => handleEdit(item)}
             onDelete={() => handleDelete(item._id)}
+            onRestore={() => handleRestore(item._id)}
+            isDeleted={item.deleted}
+            createdAt={item.createdAt}
+            updatedAt={item.updatedAt}
+            deletedAt={item.deletedAt}
+            isAdminMode={true}
           />
         ))}
       </Timeline>
@@ -142,15 +172,25 @@ const AdminAboutMe = () => {
       <SectionTitle>經驗</SectionTitle>
       <ExperienceContainer>
         {aboutMeContent.experience.map((item, index) => (
-          <ExperienceCard key={item._id} delay={index * 0.1}>
-            {item.imageUrl && <CardImage src={item.imageUrl} alt={item.title} />}
-            <CardContent>
+          <ExperienceCard key={item._id} delay={index * 0.1} isDeleted={item.isDeleted}>
+            <CardContent isDeleted={item.isDeleted}>
               <h3>{item.title}</h3>
               <p>{item.subtitle}</p>
               <div dangerouslySetInnerHTML={{ __html: item.content }} />
+              <TimeInfo>
+                <p>創建時間: {new Date(item.createdAt).toLocaleString()}</p>
+                <p>更新時間: {new Date(item.updatedAt).toLocaleString()}</p>
+                {item.deletedAt && <p>刪除時間: {new Date(item.deletedAt).toLocaleString()}</p>}
+              </TimeInfo>
               <ButtonGroup>
-                <EditButton onClick={() => handleEdit(item)}>編輯</EditButton>
-                <DeleteButton onClick={() => handleDelete(item._id)}>刪除</DeleteButton>
+                {item.isDeleted ? (
+                  <RestoreButton onClick={() => handleRestore(item._id)}>恢復</RestoreButton>
+                ) : (
+                  <>
+                    <EditButton onClick={() => handleEdit(item)}>編輯</EditButton>
+                    <DeleteButton onClick={() => handleDelete(item._id)}>刪除</DeleteButton>
+                  </>
+                )}
               </ButtonGroup>
             </CardContent>
           </ExperienceCard>
@@ -159,7 +199,7 @@ const AdminAboutMe = () => {
     </Section>
   );
 
-  if (loading ) {
+  if (loading) {
     return <Loading />;
   }
 
@@ -175,12 +215,14 @@ const AdminAboutMe = () => {
       {renderExperience()}
 
       {isEditing && (
-        <TextEditor
-          initialData={currentItem}
-          onSave={handleSave}
-          onCancel={resetEditingState}
-          fields={fields}
-        />
+        <EditorOverlay>
+          <TextEditor
+            initialData={currentItem}
+            onSave={handleSave}
+            onCancel={resetEditingState}
+            fields={fields}
+          />
+        </EditorOverlay>
       )}
     </AdminContainer>
   );
@@ -237,14 +279,13 @@ const Timeline = styled.div`
 
 const AutobiographyContainer = styled.div`
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
   gap: 20px;
-  justify-content: center;
 `;
 
 const ExperienceContainer = styled.div`
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  display: flex;
+  flex-direction: column;
   gap: 20px;
 `;
 
@@ -253,7 +294,7 @@ const Card = styled.div`
   border-radius: 8px;
   overflow: hidden;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  transition: transform 0.3s ease;
+  transition: transform 0.3s ease, opacity 0.3s ease;
   animation: ${fadeIn} 0.5s ease forwards;
   animation-delay: ${props => props.delay}s;
   opacity: 0;
@@ -261,26 +302,31 @@ const Card = styled.div`
   &:hover {
     transform: translateY(-5px);
   }
-`;
 
-const AutobiographyCard = styled(Card)`
-  flex: 1 1 300px;
-  max-width: 400px;
-`;
-
-const ExperienceCard = styled(Card)`
-  display: flex;
-  flex-direction: column;
-`;
-
-const CardImage = styled.img`
-  width: 100%;
-  height: 200px;
-  object-fit: cover;
+  ${props => props.isDeleted && css`
+    opacity: 0.6;
+  `}
 `;
 
 const CardContent = styled.div`
   padding: 20px;
+  ${props => props.isDeleted && css`
+    background-color: #f0f0f0;
+  `}
+`;
+
+const AutobiographyCard = styled(Card)`
+  width: 100%;
+`;
+
+const ExperienceCard = styled(Card)`
+  width: 100%;
+`;
+
+const TimeInfo = styled.div`
+  font-size: 0.8em;
+  color: #666;
+  margin-top: 10px;
 `;
 
 const ButtonGroup = styled.div`
@@ -332,6 +378,28 @@ const DeleteButton = styled(Button)`
   &:hover {
     background-color: #da190b;
   }
+`;
+
+const RestoreButton = styled(Button)`
+  background-color: #2196f3;
+  color: white;
+
+  &:hover {
+    background-color: #0b7dda;
+  }
+`;
+
+const EditorOverlay = styled.div`
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
 `;
 
 export default AdminAboutMe;

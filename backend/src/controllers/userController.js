@@ -70,7 +70,7 @@ class UserController {
           });        
           return res.status(200).json({
           message: `Login successfully! Welcome back ${userExist.name}.`,
-          accessToken: jsonWebToken,
+          jsonWebToken: jsonWebToken,
           sessionId: sessionId
           })
      

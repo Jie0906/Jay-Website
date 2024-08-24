@@ -1,25 +1,19 @@
 // src/api/loginApi.js
+
+import { apiCall } from './common/apiCall';
+
 export const login = async (username, password) => {
   try {
-    const response = await fetch(`${process.env.REACT_APP_API_URL}/admin/login`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ username, password }),
-      credentials: 'include' // 这确保了 cookie 被发送和接收
-    });
+    const response = await apiCall('/admin/login', 'POST', { username, password });
+    console.log(`Responese: ${response}`)
+    
+    // 設置 cookie
+    document.cookie = `jsonWebToken=${response.jsonWebToken}; path=/; Secure; SameSite=Strict`;
+    document.cookie = `sessionId=${response.sessionId}; path=/; Secure; SameSite=Strict`;
 
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.message || 'Login failed');
-    }
-
-    const data = await response.json();
-    console.log('Login API response:', data);
-    return data;
+    return response;
   } catch (error) {
-    console.error('Login API error:', error);
+    console.error('Login failed:', error);
     throw error;
   }
 };

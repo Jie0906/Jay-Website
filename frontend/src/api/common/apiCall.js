@@ -1,10 +1,12 @@
 const API_URL = process.env.REACT_APP_API_URL;
 
-export async function apiCall(endpoint, method, data = null, isFileUpload = false) {
+export async function apiCall(endpoint, method, data = null, isFileUpload = false, additionalHeaders = {}) {
   let url = `${API_URL}${endpoint}`;
   let options = {
     method,
-    headers: {},
+    headers: {
+      ...additionalHeaders, // 包含從 authApi 傳過來的標頭
+    },
   };
 
   if (method === 'GET' && data) {

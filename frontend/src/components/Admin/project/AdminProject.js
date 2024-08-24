@@ -1,8 +1,8 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import styled, { keyframes } from 'styled-components';
-import { FaEdit, FaTrash, FaPlus } from 'react-icons/fa';
+import styled, { keyframes, css } from 'styled-components';
+import { FaEdit, FaTrash, FaPlus, FaUndo } from 'react-icons/fa';
 import { useInView } from 'react-intersection-observer';
-import { getAllProjects, createProject, updateProject, deleteProject } from '../../../api/projectApi';
+import { getAllAdminProjects, createProject, updateProject, deleteProject, restoreProject } from '../../../api/projectApi';
 import TextEditor from '../../../components/common/TextEditor';
 import Loading from '../../../components/common/Loading';
 import { useMessage } from '../../../components/common/MessagePopup';
@@ -27,7 +27,7 @@ const AdminProject = () => {
   const fetchProjects = useCallback(async () => {
     try {
       setLoading(true);
-      const data = await getAllProjects();
+      const data = await getAllAdminProjects();
       setProjects(data);
     } catch (error) {
       addMessage(error.message, 'error');
@@ -84,6 +84,19 @@ const AdminProject = () => {
     }
   };
 
+  const handleRestore = async (id) => {
+    try {
+      setLoading(true);
+      await restoreProject(id);
+      await fetchProjects();
+      addMessage('項目已成功恢復', 'success');
+    } catch (error) {
+      addMessage(error.message, 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Helper functions
   const resetEditingState = () => {
     setIsEditing(false);
@@ -111,6 +124,7 @@ const AdminProject = () => {
           project={project}
           onEdit={handleEdit}
           onDelete={handleDelete}
+          onRestore={handleRestore}
           disabled={loading}
         />
       ))}
@@ -150,23 +164,34 @@ const AdminProject = () => {
 };
 
 // Sub-components
-const ProjectItem = ({ project, onEdit, onDelete, disabled }) => {
+const ProjectItem = ({ project, onEdit, onDelete, onRestore, disabled }) => {
   const { ref, inView } = useInView({
     triggerOnce: true,
     threshold: 0.1,
   });
 
   return (
-    <StyledProjectItem ref={ref} inView={inView}>
+    <StyledProjectItem ref={ref} inView={inView} isDeleted={project.deleted}>
       {project.imageUrl && <ProjectImage src={project.imageUrl} alt={project.title} />}
       <ProjectContent>
         <ProjectTitle>{project.title || 'Untitled Project'}</ProjectTitle>
         <ProjectDate>{project.date ? new Date(project.date).toLocaleDateString() : 'No date'}</ProjectDate>
         <ProjectDescription dangerouslySetInnerHTML={{ __html: project.content ? project.content.substring(0, 100) + '...' : '' }} />
+        <TimeInfo>
+          <p>創建時間: {new Date(project.createdAt).toLocaleString()}</p>
+          <p>更新時間: {new Date(project.updatedAt).toLocaleString()}</p>
+          {project.deletedAt && <p>刪除時間: {new Date(project.deletedAt).toLocaleString()}</p>}
+        </TimeInfo>
       </ProjectContent>
       <ActionButtons>
-        <ActionButton onClick={() => onEdit(project)} disabled={disabled}><FaEdit /></ActionButton>
-        <ActionButton onClick={() => onDelete(project._id)} disabled={disabled}><FaTrash /></ActionButton>
+        {project.deleted ? (
+          <ActionButton onClick={() => onRestore(project._id)} disabled={disabled}><FaUndo /></ActionButton>
+        ) : (
+          <>
+            <ActionButton onClick={() => onEdit(project)} disabled={disabled}><FaEdit /></ActionButton>
+            <ActionButton onClick={() => onDelete(project._id)} disabled={disabled}><FaTrash /></ActionButton>
+          </>
+        )}
       </ActionButtons>
     </StyledProjectItem>
   );
@@ -209,9 +234,13 @@ const StyledProjectItem = styled.div`
   overflow: hidden;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
   transition: all 0.3s ease;
-  opacity: ${props => props.inView ? 1 : 0};
+  opacity: ${props => props.inView ? (props.isDeleted ? 0.6 : 1) : 0};
   transform: ${props => props.inView ? 'translateY(0)' : 'translateY(20px)'};
   animation: ${fadeIn} 0.5s ease forwards;
+
+  ${props => props.isDeleted && css`
+    background-color: #f0f0f0;
+  `}
 
   &:hover {
     transform: translateY(-5px);
@@ -245,6 +274,12 @@ const ProjectDescription = styled.div`
   color: #4a3520;
   font-size: 1rem;
   line-height: 1.4;
+`;
+
+const TimeInfo = styled.div`
+  font-size: 0.8em;
+  color: #666;
+  margin-top: 10px;
 `;
 
 const ActionButtons = styled.div`

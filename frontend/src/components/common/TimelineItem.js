@@ -1,9 +1,26 @@
 // src/components/common/TimelineItem.js
 import React, { useState } from 'react';
-import styled, { keyframes } from 'styled-components';
+import styled, { keyframes, css } from 'styled-components';
 import { useInView } from 'react-intersection-observer';
 
-const TimelineItem = ({ id, date, title, subtitle, content, imageUrl, type, isLeft, onEdit, onDelete }) => {
+const TimelineItem = ({ 
+  id, 
+  date, 
+  title, 
+  subtitle, 
+  content, 
+  imageUrl, 
+  type, 
+  isLeft, 
+  onEdit, 
+  onDelete, 
+  onRestore,
+  isDeleted,
+  createdAt,
+  updatedAt,
+  deletedAt,
+  isAdminMode = false
+}) => {
   const { ref, inView } = useInView({ triggerOnce: true, threshold: 0.1 });
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [imageError, setImageError] = useState(false);
@@ -13,8 +30,8 @@ const TimelineItem = ({ id, date, title, subtitle, content, imageUrl, type, isLe
   };
 
   return (
-    <StyledTimelineItem ref={ref} inView={inView} isLeft={isLeft}>
-      <TimelineContent isLeft={isLeft}>
+    <StyledTimelineItem ref={ref} inView={inView} isLeft={isLeft} isDeleted={isDeleted}>
+      <TimelineContent isLeft={isLeft} isDeleted={isDeleted}>
         {imageUrl && !imageError && (
           <TimelineImageWrapper isLeft={isLeft}>
             <TimelineImage src={imageUrl} alt={title} onError={handleImageError} />
@@ -26,25 +43,35 @@ const TimelineItem = ({ id, date, title, subtitle, content, imageUrl, type, isLe
           {subtitle && <TimelineSubtitle>{subtitle}</TimelineSubtitle>}
           <TimelineText dangerouslySetInnerHTML={{ __html: content }} />
           <TimelineDate>{new Date(date).toLocaleDateString()}</TimelineDate>
-        </TimelineTextContent>
-        <MenuContainer>
-          <MenuButton onClick={() => setIsMenuOpen(!isMenuOpen)}>⋮</MenuButton>
-          {isMenuOpen && (
-            <Menu>
-              <MenuItem onClick={() => { onEdit(id); setIsMenuOpen(false); }}>編輯</MenuItem>
-              <MenuItem onClick={() => { onDelete(id); setIsMenuOpen(false); }}>刪除</MenuItem>
-            </Menu>
+          {isAdminMode && (
+            <TimeInfo>
+              <p>創建時間: {new Date(createdAt).toLocaleString()}</p>
+              <p>更新時間: {new Date(updatedAt).toLocaleString()}</p>
+              {deletedAt && <p>刪除時間: {new Date(deletedAt).toLocaleString()}</p>}
+            </TimeInfo>
           )}
-        </MenuContainer>
+        </TimelineTextContent>
+        {isAdminMode && (
+          <MenuContainer>
+            <MenuButton onClick={() => setIsMenuOpen(!isMenuOpen)}>⋮</MenuButton>
+            {isMenuOpen && (
+              <Menu>
+                {isDeleted ? (
+                  <MenuItem onClick={() => { onRestore(id); setIsMenuOpen(false); }}>恢復</MenuItem>
+                ) : (
+                  <>
+                    <MenuItem onClick={() => { onEdit(id); setIsMenuOpen(false); }}>編輯</MenuItem>
+                    <MenuItem onClick={() => { onDelete(id); setIsMenuOpen(false); }}>刪除</MenuItem>
+                  </>
+                )}
+              </Menu>
+            )}
+          </MenuContainer>
+        )}
       </TimelineContent>
     </StyledTimelineItem>
   );
 };
-const TimelineTitle = styled.h3`
-  margin: 0 0 5px 0;
-  color: #8b5e3c;
-  font-size: 1.4rem;
-`;
 
 const slideIn = keyframes`
   from {
@@ -65,6 +92,9 @@ const StyledTimelineItem = styled.div`
   transform: ${({ inView }) => (inView ? 'none' : 'translateY(50px)')};
   animation: ${({ inView }) => (inView ? slideIn : 'none')} 0.6s ease-out;
   margin-left: ${({ isLeft }) => (isLeft ? '0' : '50%')};
+  ${({ isDeleted }) => isDeleted && css`
+    opacity: 0.6;
+  `}
 `;
 
 const TimelineContent = styled.div`
@@ -76,6 +106,9 @@ const TimelineContent = styled.div`
   display: flex;
   flex-direction: column;
   margin: ${({ isLeft }) => (isLeft ? '0 50px 0 0' : '0 0 0 50px')};
+  ${({ isDeleted }) => isDeleted && css`
+    background-color: #f0f0f0;
+  `}
 
   &:after {
     content: '';
@@ -116,6 +149,12 @@ const TimelineType = styled.span`
   margin-bottom: 5px;
 `;
 
+const TimelineTitle = styled.h3`
+  margin: 0 0 5px 0;
+  color: #8b5e3c;
+  font-size: 1.4rem;
+`;
+
 const TimelineSubtitle = styled.h4`
   margin: 0 0 10px 0;
   color: #8b5e3c;
@@ -134,6 +173,12 @@ const TimelineDate = styled.p`
   color: #d48c2e;
   font-size: 0.9rem;
   font-style: italic;
+`;
+
+const TimeInfo = styled.div`
+  font-size: 0.8em;
+  color: #666;
+  margin-top: 10px;
 `;
 
 const MenuContainer = styled.div`

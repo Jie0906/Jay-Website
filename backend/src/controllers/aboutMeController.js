@@ -41,13 +41,49 @@ class AboutMeController {
 
     getAllAboutMe = async (req, res, next) => {
         try {
-            const aboutMeContent = await AboutMe.find({ deleted: false }).sort('order');
+            const aboutMeContent = await AboutMe.find()
+                .sort('order')
+                .select('type title subtitle content date startDate endDate company imagePath imageUrl order formattedDate');
+    
             const groupedContent = {
-                autobiography: aboutMeContent.filter(item => item.type === 'autobiography'),
-                education: aboutMeContent.filter(item => item.type === 'education'),
-                experience: aboutMeContent.filter(item => item.type === 'experience')
+                autobiography: [],
+                education: [],
+                experience: []
             };
+    
+            aboutMeContent.forEach(item => {
+                const itemObj = item.toObject({ virtuals: true });
+                groupedContent[item.type].push(itemObj);
+            });
+    
             res.status(200).json(groupedContent);
+        } catch (error) {
+            next(error);
+        }
+    };
+
+    getAllAdminAboutMe = async (req, res, next) => {
+        try {
+            const aboutMeContent = await AboutMe.findWithDeleted({})
+                .sort('order')
+                .select('+createdAt +updatedAt +deleted');
+    
+            const groupedContent = {
+                autobiography: [],
+                education: [],
+                experience: []
+            };
+    
+            aboutMeContent.forEach(item => {
+                const itemObj = item.toObject({ virtuals: true });
+                itemObj.isDeleted = item.deleted || false;
+    
+                groupedContent[item.type].push(itemObj);
+            });
+    
+            res.status(200).json({
+                content: groupedContent
+            });
         } catch (error) {
             next(error);
         }

@@ -13,6 +13,7 @@ class TokenController {
   async verifyJWT(req, res, next) {
     try {
         const token = req.headers.authorization;
+        console.log(`@@@@@@@@@@${token}`)
 
         if (!token) {
             const error = new Error('Did not have JWT.')

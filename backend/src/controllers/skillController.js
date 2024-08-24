@@ -41,6 +41,24 @@ class SkillController {
         }
       };
 
+
+    getAllAdminSkills = async (req, res, next) => {
+  try {
+    const skills = await Skill.findWithDeleted()
+      .select('+createdAt +updatedAt +deletedAt +deleted');
+    const formattedSkills = skills.map(skill => ({
+      ...skill._doc,
+      isDeleted: skill.deleted || false,
+      createdAt: skill.createdAt ? skill.createdAt.toISOString() : null,
+      updatedAt: skill.updatedAt ? skill.updatedAt.toISOString() : null,
+      deletedAt: skill.deletedAt ? skill.deletedAt.toISOString() : null
+    }));
+    res.status(200).json(formattedSkills);
+  } catch (error) {
+    next(error);
+  }
+};
+
     updateSkill = async (req, res, next) => {
     try {
         const { title, subtitle, content } = req.body;
