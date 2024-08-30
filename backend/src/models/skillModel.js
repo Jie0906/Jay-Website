@@ -14,9 +14,12 @@ const SkillSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
-  image: {
-    type: String,
+  imagePath: {
+    type: String
   },
+  imageUrl: {
+    type: String
+  }
 },{
     timestamps: true
 });

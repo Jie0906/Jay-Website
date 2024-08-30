@@ -10,8 +10,11 @@ const ProjectSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
-  image: {
-    type: String,
+  imagePath: {
+    type: String
+  },
+  imageUrl: {
+    type: String
   },
   date: {
     type: Date,

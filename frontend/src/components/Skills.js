@@ -1,122 +1,211 @@
-// src/components/Skills.js
-import React, { useEffect, useState } from 'react';
-import styled from 'styled-components';
+import React, { useEffect, useState, useCallback } from 'react';
+import styled, { keyframes, createGlobalStyle } from 'styled-components';
 import { useInView } from 'react-intersection-observer';
 import { getAllSkills } from '../api/skillApi';
+import Loading from '../components/common/Loading';
 
-const SkillSection = ({ skill }) => {
-  const { ref, inView } = useInView({ triggerOnce: true });
+// 添加 Google Fonts
+const GlobalStyle = createGlobalStyle`
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@700&display=swap');
+`;
 
-  return (
-    <SkillItem ref={ref} style={{ opacity: inView ? 1 : 0.5, transform: inView ? 'scale(1)' : 'scale(0.9)' }}>
-      <SkillDetails>
-        <SkillTitle>{skill.title}</SkillTitle>
-        <SkillSubtitle>{skill.subtitle}</SkillSubtitle>
-        <SkillDescription>{skill.content}</SkillDescription>
-      </SkillDetails>
-      {skill.image && (
-        <SkillImageWrapper>
-          <SkillImage src={skill.image} alt={skill.title} />
-        </SkillImageWrapper>
-      )}
-    </SkillItem>
-  );
-};
-
-const Skills = () => {
+const Skill = () => {
   const [skills, setSkills] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
 
-  useEffect(() => {
-    const fetchSkills = async () => {
-      try {
-        const data = await getAllSkills();
-        setSkills(data);
-        setLoading(false);
-      } catch (error) {
-        setError(error);
-        setLoading(false);
-      }
-    };
-
-    fetchSkills();
+  const fetchSkills = useCallback(async () => {
+    try {
+      setLoading(true);
+      const data = await getAllSkills();
+      setSkills(data);
+    } catch (error) {
+      console.error('Failed to fetch skills:', error);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  if (loading) {
-    return <div>Loading...</div>;
-  }
+  useEffect(() => {
+    fetchSkills();
+  }, [fetchSkills]);
 
-  if (error) {
-    return <div>Error: {error.message}</div>;
+  if (loading && skills.length === 0) {
+    return <Loading />;
   }
 
   return (
-    <SkillsContainer>
-      {skills.map((skill) => (
-        <SkillSection key={skill._id} skill={skill} />
-      ))}
-    </SkillsContainer>
+    <>
+      <GlobalStyle />
+      <SkillContainer>
+        <SkillHeader>
+          <HeaderTitle>技能專長</HeaderTitle>
+          <HeaderUnderline />
+        </SkillHeader>
+        <SkillList>
+          {skills.map((skill, index) => (
+            <SkillItem key={skill._id} skill={skill} index={index} />
+          ))}
+        </SkillList>
+      </SkillContainer>
+    </>
   );
 };
 
-const SkillsContainer = styled.div`
+const SkillItem = ({ skill, index }) => {
+  const { ref, inView } = useInView({
+    triggerOnce: true,
+    threshold: 0.1,
+  });
+
+  return (
+    <StyledSkillItem ref={ref} inView={inView} index={index}>
+      {skill.imageUrl && (
+        <SkillImageWrapper>
+          <SkillImage src={skill.imageUrl} alt={skill.title} />
+        </SkillImageWrapper>
+      )}
+      <SkillContent>
+        <SkillTitle>{skill.title}</SkillTitle>
+        <SkillSubtitle>{skill.subtitle}</SkillSubtitle>
+        <SkillDescription dangerouslySetInnerHTML={{ __html: skill.content }} />
+      </SkillContent>
+    </StyledSkillItem>
+  );
+};
+
+// Animations
+const fadeInUp = keyframes`
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+`;
+
+const expandWidth = keyframes`
+  from {
+    width: 0;
+  }
+  to {
+    width: 100px;
+  }
+`;
+
+// Styled components
+const SkillContainer = styled.div`
+  padding: 50px 0;
+  background-color: #f5e5d3;
+  width: 100%;
+`;
+
+const SkillHeader = styled.div`
+  text-align: center;
+  margin-bottom: 50px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 50px;
-  background-color: #fef5e7;
-  min-height: 100vh;
-  box-sizing: border-box;
 `;
 
-const SkillItem = styled.div`
+const HeaderTitle = styled.h1`
+  color: #4a3520;
+  font-size: 3rem;
+  font-family: 'Noto Serif TC', serif;
+  font-weight: 700;
+  margin-bottom: 10px;
+  animation: ${fadeInUp} 0.6s ease-out;
+`;
+
+const HeaderUnderline = styled.div`
+  height: 3px;
+  background-color: #8b5e3c;
+  animation: ${expandWidth} 0.8s ease-out forwards;
+`;
+
+const SkillList = styled.div`
   display: flex;
-  justify-content: space-between;
+  flex-direction: column;
   align-items: center;
+  gap: 40px;
   width: 100%;
-  max-width: 1200px;
-  margin-bottom: 40px;
-  padding: 20px;
+`;
+
+const StyledSkillItem = styled.div`
+  display: flex;
   background-color: #fffaf0;
   border-radius: 15px;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-  transition: opacity 0.6s ease-out, transform 0.6s ease-out;
-`;
+  overflow: hidden;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+  opacity: 0;
+  transform: translateY(20px);
+  animation: ${fadeInUp} 0.6s ease-out forwards;
+  animation-delay: ${props => props.index * 0.1}s;
+  width: 100%;
 
-const SkillDetails = styled.div`
-  flex: 1;
-`;
+  &:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+  }
 
-const SkillTitle = styled.h2`
-  margin: 0;
-  color: #8b5e3c;
-`;
-
-const SkillSubtitle = styled.h3`
-  font-size: 1.2em;
-  margin-bottom: 10px;
-  color: grey;
-`;
-
-const SkillDescription = styled.p`
-  color: #7a5533;
+  @media (max-width: 768px) {
+    flex-direction: column;
+  }
 `;
 
 const SkillImageWrapper = styled.div`
-  flex: 0 0 200px;
-  height: 200px;
-  margin-left: 20px;
-  border-radius: 15px;
+  flex: 0 0 300px;
+  height: 300px;
   overflow: hidden;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+
+  @media (max-width: 1024px) {
+    flex: 0 0 250px;
+    height: 250px;
+  }
+
+  @media (max-width: 768px) {
+    flex: none;
+    height: 200px;
+  }
 `;
 
 const SkillImage = styled.img`
   width: 100%;
   height: 100%;
   object-fit: cover;
+  transition: transform 0.3s ease;
+
+  ${StyledSkillItem}:hover & {
+    transform: scale(1.05);
+  }
 `;
 
+const SkillContent = styled.div`
+  flex: 1;
+  padding: 30px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+`;
 
-export default Skills;
+const SkillTitle = styled.h3`
+  color: #6b4226;
+  margin: 0 0 15px 0;
+  font-size: 1.8rem;
+`;
+
+const SkillSubtitle = styled.h4`
+  color: #8b5a2b;
+  font-size: 1.2rem;
+  margin: 0 0 15px 0;
+`;
+
+const SkillDescription = styled.div`
+  color: #4a3520;
+  font-size: 1.1rem;
+  line-height: 1.6;
+`;
+
+export default Skill;

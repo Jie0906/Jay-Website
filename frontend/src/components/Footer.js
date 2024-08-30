@@ -3,14 +3,20 @@ import React from 'react';
 import styled from 'styled-components';
 import { FaLine, FaInstagram, FaGithub, FaPhone, FaEnvelope } from 'react-icons/fa';
 
-const FooterContainer = styled.div`
+const FooterContainer = styled.footer`
+  width: 100%;
+  background-color: #f8f9fa;
+  border-top: 1px solid #eaeaea;
+`;
+
+const FooterContent = styled.div`
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   padding: 20px;
-  background-color: #f8f9fa;
-  border-top: 1px solid #eaeaea;
+  max-width: 1200px;
+  margin: 0 auto;
 `;
 
 const IconContainer = styled.div`
@@ -46,27 +52,29 @@ const InfoItem = styled.div`
 const Footer = () => {
   return (
     <FooterContainer>
-      <IconContainer>
-        <IconLink href="https://line.me/" target="_blank" rel="noopener noreferrer">
-          <FaLine />
-        </IconLink>
-        <IconLink href="https://www.instagram.com/" target="_blank" rel="noopener noreferrer">
-          <FaInstagram />
-        </IconLink>
-        <IconLink href="https://github.com/" target="_blank" rel="noopener noreferrer">
-          <FaGithub />
-        </IconLink>
-      </IconContainer>
-      <ContactInfo>
-        <InfoItem>
-          <FaPhone />
-          <span>+886 975206512</span>
-        </InfoItem>
-        <InfoItem>
-          <FaEnvelope />
-          <span>eugene605110@gmail.com</span>
-        </InfoItem>
-      </ContactInfo>
+      <FooterContent>
+        <IconContainer>
+          <IconLink href="https://line.me/" target="_blank" rel="noopener noreferrer">
+            <FaLine />
+          </IconLink>
+          <IconLink href="https://www.instagram.com/" target="_blank" rel="noopener noreferrer">
+            <FaInstagram />
+          </IconLink>
+          <IconLink href="https://github.com/" target="_blank" rel="noopener noreferrer">
+            <FaGithub />
+          </IconLink>
+        </IconContainer>
+        <ContactInfo>
+          <InfoItem>
+            <FaPhone />
+            <span>+886 975206512</span>
+          </InfoItem>
+          <InfoItem>
+            <FaEnvelope />
+            <span>eugene605110@gmail.com</span>
+          </InfoItem>
+        </ContactInfo>
+      </FooterContent>
     </FooterContainer>
   );
 };

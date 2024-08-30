@@ -1,100 +1,107 @@
-// src/components/Profile.js
 import React from 'react';
-import styled from 'styled-components';
+import styled, { keyframes } from 'styled-components';
+import { FaLinkedin, FaGithub, FaEnvelope } from 'react-icons/fa';
+
+const fadeIn = keyframes`
+  from { opacity: 0; }
+  to { opacity: 1; }
+`;
+
+const slideUp = keyframes`
+  from { transform: translateY(50px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+`;
 
 const ProfileContainer = styled.div`
   display: flex;
   justify-content: center;
   align-items: center;
-  padding: 50px;
-  background: url('/assets/background.jpeg') no-repeat center center; /* 背景图片 */
+  height: 100vh;
+  width: 100vw;
+  background:   
+    radial-gradient(circle, rgba(0, 0, 0, 0.8) 0%, rgba(0, 0, 0, 0.4) 100%),
+    url('/assets/adavator.jpeg') no-repeat center center;
   background-size: cover;
-  height: calc(100vh - 80px);
   position: relative;
   overflow: hidden;
 `;
 
-const Overlay = styled.div`
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(255, 250, 240, 0.6); /* 半透明背景 */
-  z-index: 1;
-`;
-
 const ProfileContent = styled.div`
-  position: relative;
-  z-index: 2;
-  display: grid;
-  grid-template-columns: 1fr 2fr;
-  grid-template-rows: auto auto;
-  gap: 20px;
-  max-width: 1200px;
-  width: 100%;
-  border-radius: 15px;
-`;
-
-const ProfileImageWrapper = styled.div`
-  grid-column: 1 / span 1;
-  grid-row: 1 / span 2;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: center;
-  width: 100%;
+  text-align: center;
+  color: white;
+  padding: 40px;
+  background: rgba(0, 0, 0, 0.5);
+  border-radius: 20px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(10px);
+  animation: ${fadeIn} 1.5s ease-out;
 `;
 
-const ProfileImage = styled.img`
-  width: 200px;
-  height: 200px;
-  border-radius: 50%;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+const ProfileName = styled.h1`
+  font-size: 3.5rem;
+  font-weight: bold;
+  margin-bottom: 20px;
+  animation: ${slideUp} 1s ease-out 0.5s both;
+`;
+
+const Subtitle = styled.div`
+  font-size: 1.4rem;
+  margin-bottom: 30px;
+  animation: ${slideUp} 1s ease-out 1s both;
 `;
 
 const Motto = styled.div`
-  grid-column: 2 / span 1;
-  grid-row: 1 / span 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.5rem;
-  color: #7a5533;
+  font-size: 1.6rem;
+  font-style: italic;
+  color: #FFC300;
+  margin-bottom: 40px;
+  max-width: 600px;
+  line-height: 1.4;
+  animation: ${slideUp} 1s ease-out 1.5s both;
 `;
 
-const Bio = styled.div`
-  grid-column: 2 / span 1;
-  grid-row: 2 / span 1;
-  background-color: #fffaf0;
-  border-radius: 15px;
-  padding: 20px;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+const SocialLinks = styled.div`
   display: flex;
-  align-items: center;
   justify-content: center;
+  gap: 20px;
+  margin-top: 20px;
+  animation: ${slideUp} 1s ease-out 2s both;
 `;
 
-const BioText = styled.p`
-  font-size: 1.2rem;
-  color: #7a5533;
-  text-align: left;
-  margin: 0;
+const SocialIcon = styled.a`
+  color: white;
+  font-size: 1.8rem;
+  transition: all 0.3s ease;
+
+  &:hover {
+    color: #FFC300;
+    transform: translateY(-5px);
+  }
 `;
 
 const Profile = () => {
   return (
     <ProfileContainer>
-      <Overlay />
       <ProfileContent>
-        <ProfileImageWrapper>
-          <ProfileImage src="/assets/adavator.JPG" alt="Profile" />
-        </ProfileImageWrapper>
-        <Motto>“If you are doing your best,you will not have to worry about failure.”</Motto>
-        <Bio>
-          <BioText>
-            I'm a dedicated culture critic and blogger located in San Francisco, California. Geraldine DeRuiter's husband Rand has a job that takes him all over the world. After she was laid off from her job, she started tagging along with him and blogging their experiences at The Everywhereist. She says she blogs to help Rand remember where they’ve been and what they’ve seen, but she consistently does see the site set up as doing for the rest of us what she can: making us feel like we’re in on the adventure she’s having.
-          </BioText>
-        </Bio>
+        <ProfileName>Jay Li</ProfileName>
+        <Subtitle>Engineer by Profession | Coder by Passion</Subtitle>
+        <Motto>
+          "If you are doing your best, you will not have to worry about failure."
+        </Motto>
+        <SocialLinks>
+          <SocialIcon href="#" target="_blank" rel="noopener noreferrer">
+            <FaLinkedin />
+          </SocialIcon>
+          <SocialIcon href="#" target="_blank" rel="noopener noreferrer">
+            <FaGithub />
+          </SocialIcon>
+          <SocialIcon href="mailto:your.email@example.com">
+            <FaEnvelope />
+          </SocialIcon>
+        </SocialLinks>
       </ProfileContent>
     </ProfileContainer>
   );
