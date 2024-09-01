@@ -4,16 +4,15 @@ const Project = require('../models/projectModel')
 class ProjectController {
     createProject = async (req, res, next) => {
         try{
-            const { title, content, date } = req.body
-            if (!title || !content || !date ){
+            const { title, content } = req.body
+            if (!title || !content ){
                 const error = new Error('Required fields cannot be empty.')
                 error.status = 400
                 throw error
             }
             let infor = {
                 title,
-                content,
-                date 
+                content
             }
             if (req.file) {
               infor.imagePath = req.filePath;
@@ -101,7 +100,6 @@ class ProjectController {
         const formattedProject = {
           title: project.title,
           content: project.content,
-          date: project.date,
           imagePath: project.imagePath,
           imageUrl: project.imageUrl,
           createdAt: project.createdAt,
@@ -117,16 +115,15 @@ class ProjectController {
 
     updateProject = async (req, res, next) => {
     try {
-        const { title, content, date } = req.body;
+        const { title, content } = req.body;
         if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
         const error = new Error('Invalid ID');
         error.status = 400;
         throw error;
         }
         let infor = {
-            title: title,
-            content : content, 
-            date : date
+          title: title,
+          content : content
         }  
         if (req.file) {
           infor.image = req.file.path; 

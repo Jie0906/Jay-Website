@@ -10,14 +10,20 @@ const GlobalStyle = createGlobalStyle`
 `;
 
 const Skill = () => {
-  const [skills, setSkills] = useState([]);
+  const [skillContent, setSkillContent] = useState({
+    technical: [],
+    certification: []
+  });
   const [loading, setLoading] = useState(true);
 
   const fetchSkills = useCallback(async () => {
     try {
       setLoading(true);
       const data = await getAllSkills();
-      setSkills(data);
+      // 根據 type 分類技能
+      const technical = data.filter(skill => skill.type === 'technical');
+      const certification = data.filter(skill => skill.type === 'certification');
+      setSkillContent({ technical, certification });
     } catch (error) {
       console.error('Failed to fetch skills:', error);
     } finally {
@@ -29,7 +35,7 @@ const Skill = () => {
     fetchSkills();
   }, [fetchSkills]);
 
-  if (loading && skills.length === 0) {
+  if (loading) {
     return <Loading />;
   }
 
@@ -37,21 +43,28 @@ const Skill = () => {
     <>
       <GlobalStyle />
       <SkillContainer>
-        <SkillHeader>
-          <HeaderTitle>技能專長</HeaderTitle>
-          <HeaderUnderline />
-        </SkillHeader>
-        <SkillList>
-          {skills.map((skill, index) => (
-            <SkillItem key={skill._id} skill={skill} index={index} />
-          ))}
-        </SkillList>
+        {renderSection('技術技能', skillContent.technical)}
+        {renderSection('專業證照', skillContent.certification)}
       </SkillContainer>
     </>
   );
 };
 
-const SkillItem = ({ skill, index }) => {
+const renderSection = (title, items = []) => (
+  <Section>
+    <SectionHeader>
+      <SectionTitle>{title}</SectionTitle>
+      <HeaderUnderline />
+    </SectionHeader>
+    <SkillGrid>
+      {items.map((item, index) => (
+        <SkillItem key={item._id} item={item} index={index} />
+      ))}
+    </SkillGrid>
+  </Section>
+);
+
+const SkillItem = ({ item, index }) => {
   const { ref, inView } = useInView({
     triggerOnce: true,
     threshold: 0.1,
@@ -59,15 +72,10 @@ const SkillItem = ({ skill, index }) => {
 
   return (
     <StyledSkillItem ref={ref} inView={inView} index={index}>
-      {skill.imageUrl && (
-        <SkillImageWrapper>
-          <SkillImage src={skill.imageUrl} alt={skill.title} />
-        </SkillImageWrapper>
-      )}
       <SkillContent>
-        <SkillTitle>{skill.title}</SkillTitle>
-        <SkillSubtitle>{skill.subtitle}</SkillSubtitle>
-        <SkillDescription dangerouslySetInnerHTML={{ __html: skill.content }} />
+        <SkillTitle>{item.title}</SkillTitle>
+        <SkillSubtitle>{item.subtitle}</SkillSubtitle>
+        <SkillDescription dangerouslySetInnerHTML={{ __html: item.content }} />
       </SkillContent>
     </StyledSkillItem>
   );
@@ -101,17 +109,21 @@ const SkillContainer = styled.div`
   width: 100%;
 `;
 
-const SkillHeader = styled.div`
-  text-align: center;
+const Section = styled.div`
   margin-bottom: 50px;
+`;
+
+const SectionHeader = styled.div`
+  text-align: center;
+  margin-bottom: 30px;
   display: flex;
   flex-direction: column;
   align-items: center;
 `;
 
-const HeaderTitle = styled.h1`
+const SectionTitle = styled.h2`
   color: #4a3520;
-  font-size: 3rem;
+  font-size: 2.5rem;
   font-family: 'Noto Serif TC', serif;
   font-weight: 700;
   margin-bottom: 10px;
@@ -124,16 +136,24 @@ const HeaderUnderline = styled.div`
   animation: ${expandWidth} 0.8s ease-out forwards;
 `;
 
-const SkillList = styled.div`
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 40px;
+const SkillGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
   width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+
+  @media (max-width: 1024px) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+  }
 `;
 
 const StyledSkillItem = styled.div`
-  display: flex;
   background-color: #fffaf0;
   border-radius: 15px;
   overflow: hidden;
@@ -143,69 +163,39 @@ const StyledSkillItem = styled.div`
   transform: translateY(20px);
   animation: ${fadeInUp} 0.6s ease-out forwards;
   animation-delay: ${props => props.index * 0.1}s;
-  width: 100%;
+  height: 100%;
 
   &:hover {
     transform: translateY(-5px);
     box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
   }
-
-  @media (max-width: 768px) {
-    flex-direction: column;
-  }
-`;
-
-const SkillImageWrapper = styled.div`
-  flex: 0 0 300px;
-  height: 300px;
-  overflow: hidden;
-
-  @media (max-width: 1024px) {
-    flex: 0 0 250px;
-    height: 250px;
-  }
-
-  @media (max-width: 768px) {
-    flex: none;
-    height: 200px;
-  }
-`;
-
-const SkillImage = styled.img`
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  transition: transform 0.3s ease;
-
-  ${StyledSkillItem}:hover & {
-    transform: scale(1.05);
-  }
 `;
 
 const SkillContent = styled.div`
-  flex: 1;
-  padding: 30px;
+  padding: 20px;
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  height: 100%;
 `;
 
 const SkillTitle = styled.h3`
   color: #6b4226;
-  margin: 0 0 15px 0;
-  font-size: 1.8rem;
+  margin: 0 0 10px 0;
+  font-size: 1.4rem;
 `;
 
 const SkillSubtitle = styled.h4`
   color: #8b5a2b;
-  font-size: 1.2rem;
-  margin: 0 0 15px 0;
+  font-size: 1.1rem;
+  margin: 0 0 10px 0;
 `;
 
 const SkillDescription = styled.div`
   color: #4a3520;
-  font-size: 1.1rem;
-  line-height: 1.6;
+  font-size: 1rem;
+  line-height: 1.5;
+  flex-grow: 1;
+  overflow: auto;
 `;
 
 export default Skill;

@@ -1,33 +1,39 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import styled, { keyframes } from 'styled-components';
+import styled, { keyframes, css } from 'styled-components';
 import { useInView } from 'react-intersection-observer';
-import { getAllSkills, createSkill, updateSkill, deleteSkill, restoreSkill } from '../../../api/skillApi';
+import { getAllAdminSkills, createSkill, updateSkill, deleteSkill, restoreSkill } from '../../../api/skillApi';
 import TextEditor from '../../../components/common/TextEditor';
 import Loading from '../../../components/common/Loading';
 import { useMessage } from '../../../components/common/MessagePopup';
-import { FaEdit, FaTrash, FaPlus, FaUndo } from 'react-icons/fa';
 
 const AdminSkill = () => {
-  // State management
-  const [skills, setSkills] = useState([]);
+  const [skillContent, setSkillContent] = useState({
+    technical: [],
+    certification: []
+  });
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
-  const [currentSkill, setCurrentSkill] = useState(null);
+  const [currentItem, setCurrentItem] = useState(null);
+  const [selectedType, setSelectedType] = useState('');
   const { addMessage } = useMessage();
 
-  // Fields configuration
   const fields = [
-    { name: 'title', type: 'text', placeholder: '技能名稱', required: true },
-    { name: 'subtitle', type: 'text', placeholder: '簡短描述' },
-    { name: 'content', type: 'content', placeholder: '詳細描述...' },
+    { name: 'title', type: 'text', placeholder: '標題', required: true },
+    { name: 'type', type: 'select', placeholder: '選擇類型', required: true, options: [
+      { value: 'technical', label: '技術技能' },
+      { value: 'certification', label: '專業證照' }
+    ]},
+    { name: 'subtitle', type: 'text', placeholder: '副標題' },
+    { name: 'content', type: 'content', placeholder: '請輸入內容...' }
   ];
 
-  // Fetch data
   const fetchSkills = useCallback(async () => {
     try {
       setLoading(true);
-      const data = await getAllSkills();
-      setSkills(data);
+      const data = await getAllAdminSkills();
+      const technical = data.filter(skill => skill.type === 'technical');
+      const certification = data.filter(skill => skill.type === 'certification');
+      setSkillContent({ technical, certification });
     } catch (error) {
       addMessage(error.message, 'error');
     } finally {
@@ -39,28 +45,29 @@ const AdminSkill = () => {
     fetchSkills();
   }, [fetchSkills]);
 
-  // Event handlers
   const handleCreate = () => {
-    setCurrentSkill({ title: '', subtitle: '', content: '' });
+    setCurrentItem({ title: '', subtitle: '', content: '', type: '' });
+    setSelectedType('');
     setIsEditing(true);
   };
 
-  const handleEdit = (skill) => {
-    setCurrentSkill(skill);
+  const handleEdit = (item) => {
+    setCurrentItem(item);
+    setSelectedType(item.type);
     setIsEditing(true);
   };
 
   const handleSave = async (data) => {
     try {
       setLoading(true);
-      if (currentSkill._id) {
-        await updateSkill(currentSkill._id, data);
+      if (currentItem._id) {
+        await updateSkill(currentItem._id, data);
       } else {
         await createSkill(data);
       }
       await fetchSkills();
       resetEditingState();
-      addMessage(currentSkill._id ? '技能已成功更新' : '新技能已成功創建', 'success');
+      addMessage(currentItem._id ? '技能已成功更新' : '新技能已成功創建', 'success');
     } catch (error) {
       addMessage(error.message, 'error');
     } finally {
@@ -94,236 +101,210 @@ const AdminSkill = () => {
     }
   };
 
-  // Helper functions
   const resetEditingState = () => {
     setIsEditing(false);
-    setCurrentSkill(null);
+    setCurrentItem(null);
+    setSelectedType('');
   };
+
+  const renderSkillSection = (title, items) => (
+    <Section>
+      <SectionTitle>{title}</SectionTitle>
+      <SkillContainer>
+        {items.map((item, index) => (
+          <SkillCard key={item._id} delay={index * 0.1} isDeleted={item.isDeleted}>
+            <CardContent isDeleted={item.isDeleted}>
+              <h3>{item.title}</h3>
+              <p>{item.subtitle}</p>
+              <div dangerouslySetInnerHTML={{ __html: item.content }} />
+              <TimeInfo>
+                <p>創建時間: {new Date(item.createdAt).toLocaleString()}</p>
+                <p>更新時間: {new Date(item.updatedAt).toLocaleString()}</p>
+                {item.deletedAt && <p>刪除時間: {new Date(item.deletedAt).toLocaleString()}</p>}
+              </TimeInfo>
+              <ButtonGroup>
+                {item.isDeleted ? (
+                  <RestoreButton onClick={() => handleRestore(item._id)}>恢復</RestoreButton>
+                ) : (
+                  <>
+                    <EditButton onClick={() => handleEdit(item)}>編輯</EditButton>
+                    <DeleteButton onClick={() => handleDelete(item._id)}>刪除</DeleteButton>
+                  </>
+                )}
+              </ButtonGroup>
+            </CardContent>
+          </SkillCard>
+        ))}
+      </SkillContainer>
+    </Section>
+  );
 
   if (loading) {
     return <Loading />;
   }
 
   return (
-    <SkillsContainer>
-      <BackgroundPattern />
-      <ContentWrapper>
-        <SkillsHeader>
-          <SkillsTitle>Skills 管理</SkillsTitle>
-          <AddButton onClick={handleCreate}><FaPlus /> 添加新技能</AddButton>
-        </SkillsHeader>
-        <SkillsList>
-          {skills.map((skill) => (
-            <SkillItem 
-              key={skill._id} 
-              skill={skill} 
-              onEdit={handleEdit}
-              onDelete={handleDelete}
-              onRestore={handleRestore}
-            />
-          ))}
-        </SkillsList>
-        {isEditing && (
-          <EditorOverlay>
-            <EditorContainer>
-              <TextEditor
-                initialData={currentSkill}
-                onSave={handleSave}
-                onCancel={resetEditingState}
-                fields={fields}
-              />
-            </EditorContainer>
-          </EditorOverlay>
-        )}
-      </ContentWrapper>
-    </SkillsContainer>
+    <AdminContainer>
+      <AdminHeader>
+        <h1>Skills 管理</h1>
+        <AddButton onClick={handleCreate}>新增技能</AddButton>
+      </AdminHeader>
+
+      {renderSkillSection('技術技能', skillContent.technical)}
+      {renderSkillSection('專業證照', skillContent.certification)}
+
+      {isEditing && (
+        <EditorOverlay>
+          <TextEditor
+            initialData={currentItem}
+            onSave={handleSave}
+            onCancel={resetEditingState}
+            fields={fields}
+          />
+        </EditorOverlay>
+      )}
+    </AdminContainer>
   );
 };
 
-const SkillItem = ({ skill, onEdit, onDelete, onRestore }) => {
-  const { ref, inView } = useInView({
-    triggerOnce: true,
-    threshold: 0.1,
-  });
-
-  return (
-    <StyledSkillItem ref={ref} inView={inView}>
-      <SkillImageWrapper>
-        {skill.imageUrl && <SkillImage src={skill.imageUrl} alt={skill.title} />}
-      </SkillImageWrapper>
-      <SkillContent>
-        <SkillTitle>{skill.title}</SkillTitle>
-        <SkillSubtitle>{skill.subtitle}</SkillSubtitle>
-        <SkillDescription dangerouslySetInnerHTML={{ __html: skill.content }} />
-      </SkillContent>
-      <ActionButtons>
-        <ActionButton onClick={() => onEdit(skill)}><FaEdit /></ActionButton>
-        {skill.deleted ? (
-          <ActionButton onClick={() => onRestore(skill._id)}><FaUndo /></ActionButton>
-        ) : (
-          <ActionButton onClick={() => onDelete(skill._id)}><FaTrash /></ActionButton>
-        )}
-      </ActionButtons>
-    </StyledSkillItem>
-  );
-};
-
-// Styled components (保持原有的樣式)
 const fadeIn = keyframes`
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
 `;
 
-const slideIn = keyframes`
-  from { transform: translateY(30px); opacity: 0; }
-  to { transform: translateY(0); opacity: 1; }
-`;
-
-const SkillsContainer = styled.div`
-  position: relative;
+const AdminContainer = styled.div`
+  padding: 50px;
+  background-color: #fef5e7;
   min-height: 100vh;
-  background-color: #f5e5d3;
-  overflow: hidden;
 `;
 
-const BackgroundPattern = styled.div`
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-image: 
-    radial-gradient(#e6c9a8 20%, transparent 20%),
-    radial-gradient(#e6c9a8 20%, transparent 20%);
-  background-size: 30px 30px;
-  background-position: 0 0, 15px 15px;
-  opacity: 0.3;
-`;
-
-const ContentWrapper = styled.div`
-  position: relative;
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 50px 20px;
-  z-index: 1;
-`;
-
-const SkillsHeader = styled.div`
-  text-align: center;
-  margin-bottom: 40px;
-  animation: ${fadeIn} 0.5s ease-out;
-`;
-
-const SkillsTitle = styled.h1`
-  color: #6b4226;
-  font-size: 3rem;
-  text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
-`;
-
-const AddButton = styled.button`
-  display: block;
-  margin: 20px auto 30px;
-  padding: 12px 24px;
-  background-color: #8b5a2b;
-  color: white;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-  font-size: 1rem;
+const AdminHeader = styled.div`
   display: flex;
+  justify-content: space-between;
   align-items: center;
-  justify-content: center;
-  gap: 10px;
-  transition: background-color 0.3s, transform 0.3s;
+  margin-bottom: 30px;
 
-  &:hover {
-    background-color: #6b4226;
-    transform: translateY(-2px);
+  h1 {
+    margin: 0;
+    color: #8b5e3c;
   }
 `;
 
-const SkillsList = styled.div`
+const Section = styled.div`
+  margin-bottom: 50px;
+`;
+
+const SectionTitle = styled.h2`
+  color: #8b5e3c;
+  margin-bottom: 20px;
+`;
+
+const SkillContainer = styled.div`
   display: flex;
-  flex-direction: column;
+  flex-wrap: wrap;
   gap: 20px;
 `;
 
-const StyledSkillItem = styled.div`
-  display: flex;
-  background-color: rgba(255, 255, 255, 0.9);
-  border-radius: 10px;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+const Card = styled.div`
+  background-color: #fffaf0;
+  border-radius: 8px;
   overflow: hidden;
-  transition: all 0.3s ease;
-  opacity: ${props => props.inView ? 1 : 0};
-  transform: ${props => props.inView ? 'translateY(0)' : 'translateY(30px)'};
-  animation: ${slideIn} 0.5s ease-out;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s ease, opacity 0.3s ease;
+  animation: ${fadeIn} 0.5s ease forwards;
+  animation-delay: ${props => props.delay}s;
+  opacity: 0;
+  width: calc(33.33% - 20px);
 
   &:hover {
     transform: translateY(-5px);
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+  }
+
+  ${props => props.isDeleted && css`
+    opacity: 0.6;
+  `}
+
+  @media (max-width: 1024px) {
+    width: calc(50% - 20px);
+  }
+
+  @media (max-width: 768px) {
+    width: 100%;
   }
 `;
 
-const SkillImageWrapper = styled.div`
-  width: 200px;
-  height: 200px;
-  overflow: hidden;
-`;
+const SkillCard = styled(Card)``;
 
-const SkillImage = styled.img`
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  transition: transform 0.3s ease;
-
-  &:hover {
-    transform: scale(1.05);
-  }
-`;
-
-const SkillContent = styled.div`
-  flex: 1;
+const CardContent = styled.div`
   padding: 20px;
+  ${props => props.isDeleted && css`
+    background-color: #f0f0f0;
+  `}
 `;
 
-const SkillTitle = styled.h2`
-  color: #6b4226;
-  margin: 0 0 10px 0;
+const TimeInfo = styled.div`
+  font-size: 0.8em;
+  color: #666;
+  margin-top: 10px;
 `;
 
-const SkillSubtitle = styled.h3`
-  color: #8b5a2b;
-  font-size: 1rem;
-  margin: 0 0 15px 0;
-`;
-
-const SkillDescription = styled.div`
-  color: #4a3520;
-  font-size: 0.9rem;
-  line-height: 1.6;
-  max-height: 100px;
-  overflow-y: auto;
-`;
-
-const ActionButtons = styled.div`
+const ButtonGroup = styled.div`
   display: flex;
-  flex-direction: column;
-  justify-content: center;
-  padding: 10px;
+  justify-content: flex-end;
+  margin-top: 20px;
+  gap: 10px;
 `;
 
-const ActionButton = styled.button`
-  background: none;
+const Button = styled.button`
+  padding: 10px 20px;
   border: none;
-  font-size: 1.2rem;
-  color: #8b5a2b;
+  border-radius: 5px;
+  font-size: 1rem;
   cursor: pointer;
-  margin: 5px 0;
-  transition: color 0.3s;
+  transition: background-color 0.3s ease, transform 0.1s ease;
 
   &:hover {
-    color: #6b4226;
+    transform: translateY(-2px);
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
+`;
+
+const AddButton = styled(Button)`
+  background-color: #8b5e3c;
+  color: #fff;
+
+  &:hover {
+    background-color: #7a5533;
+  }
+`;
+
+const EditButton = styled(Button)`
+  background-color: #4caf50;
+  color: white;
+
+  &:hover {
+    background-color: #45a049;
+  }
+`;
+
+const DeleteButton = styled(Button)`
+  background-color: #f44336;
+  color: white;
+
+  &:hover {
+    background-color: #da190b;
+  }
+`;
+
+const RestoreButton = styled(Button)`
+  background-color: #2196f3;
+  color: white;
+
+  &:hover {
+    background-color: #0b7dda;
   }
 `;
 
@@ -338,18 +319,6 @@ const EditorOverlay = styled.div`
   justify-content: center;
   align-items: center;
   z-index: 1000;
-  animation: ${fadeIn} 0.3s ease-out;
-`;
-
-const EditorContainer = styled.div`
-  background-color: white;
-  padding: 30px;
-  border-radius: 10px;
-  width: 80%;
-  max-width: 800px;
-  max-height: 90vh;
-  overflow-y: auto;
-  animation: ${slideIn} 0.3s ease-out;
 `;
 
 export default AdminSkill;

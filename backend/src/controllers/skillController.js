@@ -4,13 +4,14 @@ const Skill = require('../models/skillModel')
 class SkillController {
   createSkill = async (req, res, next) => {
     try {
-        const { title, subtitle, content } = req.body
-        if (!title || !content) { // 移除 subtitle 的必填檢查
+        const { type, title, subtitle, content } = req.body
+        if (!type || !title || !content) { // 移除 subtitle 的必填檢查
             const error = new Error('Title and content cannot be empty.')
             error.status = 400
             throw error
         }
         let infor = {
+          type: type,
             title: title,
             subtitle: subtitle,
             content: content
@@ -61,16 +62,17 @@ class SkillController {
 
     updateSkill = async (req, res, next) => {
     try {
-        const { title, subtitle, content } = req.body;
+        const {type, title, subtitle, content } = req.body;
         if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
         const error = new Error('Invalid ID');
         error.status = 400;
         throw error;
         }
         let infor = {
-            title: title,
-            subtitle : subtitle, 
-            content : content
+          type: type,
+          title: title,
+          subtitle : subtitle, 
+          content : content
         } 
         if (req.file) {
           infor.imagePath = req.filePath;
@@ -83,7 +85,7 @@ class SkillController {
         throw error;
         }
         return res.status(200).json({
-            message : "Updated skill seccessfully!"
+          message : "Updated skill seccessfully!"
         });
     } catch (error) {
         if (req.file) {

@@ -63,7 +63,6 @@ const ProjectItem = ({ project, index }) => {
       </ProjectImageWrapper>
       <ProjectContent>
         <ProjectTitle>{project.title || 'Untitled Project'}</ProjectTitle>
-        <ProjectDate>{project.date ? new Date(project.date).toLocaleDateString() : 'No date'}</ProjectDate>
         <ProjectDescription dangerouslySetInnerHTML={{ __html: project.content }} />
       </ProjectContent>
     </StyledProjectItem>
@@ -127,6 +126,8 @@ const ProjectList = styled.div`
   align-items: center;
   gap: 40px;
   width: 100%;
+  max-width: 1000px;
+  margin: 0 auto;
 `;
 
 const StyledProjectItem = styled.div`
@@ -153,18 +154,18 @@ const StyledProjectItem = styled.div`
 `;
 
 const ProjectImageWrapper = styled.div`
-  flex: 0 0 350px;
-  height: 350px;
+  flex: 0 0 250px;
+  height: 250px;
   overflow: hidden;
 
   @media (max-width: 1024px) {
-    flex: 0 0 300px;
-    height: 300px;
+    flex: 0 0 200px;
+    height: 200px;
   }
 
   @media (max-width: 768px) {
     flex: none;
-    height: 250px;
+    height: 200px;
   }
 `;
 
@@ -191,12 +192,6 @@ const ProjectTitle = styled.h3`
   color: #6b4226;
   margin: 0 0 15px 0;
   font-size: 1.8rem;
-`;
-
-const ProjectDate = styled.p`
-  color: #8b5a2b;
-  font-size: 1rem;
-  margin: 0 0 15px 0;
 `;
 
 const ProjectDescription = styled.div`

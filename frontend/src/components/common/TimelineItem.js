@@ -1,11 +1,11 @@
-// src/components/common/TimelineItem.js
 import React, { useState } from 'react';
 import styled, { keyframes, css } from 'styled-components';
 import { useInView } from 'react-intersection-observer';
 
 const TimelineItem = ({ 
   id, 
-  date, 
+  startDate,
+  endDate,
   title, 
   subtitle, 
   content, 
@@ -29,6 +29,12 @@ const TimelineItem = ({
     setImageError(true);
   };
 
+  const formatDate = (date) => {
+    if (!date) return '';
+    const d = new Date(date);
+    return `${d.getFullYear()}年${d.getMonth() + 1}月`;
+  };
+
   return (
     <StyledTimelineItem ref={ref} inView={inView} isLeft={isLeft} isDeleted={isDeleted}>
       <TimelineContent isLeft={isLeft} isDeleted={isDeleted}>
@@ -42,7 +48,10 @@ const TimelineItem = ({
           <TimelineTitle>{title}</TimelineTitle>
           {subtitle && <TimelineSubtitle>{subtitle}</TimelineSubtitle>}
           <TimelineText dangerouslySetInnerHTML={{ __html: content }} />
-          <TimelineDate>{new Date(date).toLocaleDateString()}</TimelineDate>
+          <TimelineDates>
+            <TimelineDate>開始時間: {formatDate(startDate)}</TimelineDate>
+            <TimelineDate>結束時間: {endDate ? formatDate(endDate) : '至今'}</TimelineDate>
+          </TimelineDates>
           {isAdminMode && (
             <TimeInfo>
               <p>創建時間: {new Date(createdAt).toLocaleString()}</p>
@@ -143,42 +152,53 @@ const TimelineTextContent = styled.div`
 `;
 
 const TimelineType = styled.span`
-  font-size: 0.8rem;
+  font-size: 1rem;
   color: #d48c2e;
   text-transform: uppercase;
   margin-bottom: 5px;
+  font-family: 'Roboto', sans-serif;
 `;
 
 const TimelineTitle = styled.h3`
   margin: 0 0 5px 0;
   color: #8b5e3c;
-  font-size: 1.4rem;
+  font-size: 1.6rem;
+  font-family: 'Noto Serif TC', serif;
 `;
 
 const TimelineSubtitle = styled.h4`
   margin: 0 0 10px 0;
   color: #8b5e3c;
-  font-size: 1.2rem;
+  font-size: 1.4rem;
+  font-family: 'Noto Serif TC', serif;
 `;
 
 const TimelineText = styled.div`
   margin: 0 0 15px 0;
   color: #7a5533;
-  font-size: 1rem;
-  line-height: 1.5;
+  font-size: 1.2rem;
+  line-height: 1.6;
+  font-family: 'Roboto', sans-serif;
 `;
 
-const TimelineDate = styled.p`
-  margin: 0;
+const TimelineDates = styled.div`
+  display: flex;
+  justify-content: space-between;
+  margin-top: 10px;
+`;
+
+const TimelineDate = styled.span`
   color: #d48c2e;
-  font-size: 0.9rem;
+  font-size: 1rem;
   font-style: italic;
+  font-family: 'Roboto', sans-serif;
 `;
 
 const TimeInfo = styled.div`
   font-size: 0.8em;
   color: #666;
   margin-top: 10px;
+  font-family: 'Roboto', sans-serif;
 `;
 
 const MenuContainer = styled.div`
@@ -215,6 +235,7 @@ const MenuItem = styled.div`
   padding: 10px 20px;
   cursor: pointer;
   transition: background-color 0.3s ease, color 0.3s ease;
+  font-family: 'Roboto', sans-serif;
 
   &:hover {
     background-color: #d48c2e;
