@@ -5,7 +5,7 @@ class ProjectController {
     createProject = async (req, res, next) => {
         try{
             const { title, content, date } = req.body
-            if (!title || !content || !date ){
+            if (!title || !content ){
                 const error = new Error('Required fields cannot be empty.')
                 error.status = 400
                 throw error
@@ -13,13 +13,17 @@ class ProjectController {
             let infor = {
                 title,
                 content,
-                date 
+                date
             }
             if (req.file) {
               infor.imagePath = req.filePath;
               infor.imageUrl = req.fileUrl; 
           }
             const newProject = await Project.create(infor)
+
+            const redisClient = await connectRedis()
+            await redisClient.del('/api/project')
+
             return res.status(201).json({
                 message: 'Created new project successfully!',
                 newProject
@@ -124,19 +128,25 @@ class ProjectController {
         throw error;
         }
         let infor = {
-            title: title,
-            content : content, 
-            date : date
+          title: title,
+          content : content,
+          date: date
         }  
         if (req.file) {
           infor.image = req.file.path; 
         }
+        console.log(infor)
         const project = await Project.findByIdAndUpdate(req.params.id, infor);
         if (!project) {
         const error = new Error('Project not found');
         error.status = 404;
         throw error;
         }
+
+        const redisClient = await connectRedis();
+        await redisClient.del(`/api/project/${req.params.id}`);
+        await redisClient.del('/api/project');
+
         return res.status(200).json({
             message : "Updated project seccessfully!"
         });
@@ -161,6 +171,11 @@ class ProjectController {
         error.status = 404;
         throw error;
         }
+
+        const redisClient = await connectRedis();
+        await redisClient.del(`/api/project/${req.params.id}`);
+        await redisClient.del('/api/project');
+
         return res.status(204).send();
     } catch (error) {
         next(error);

@@ -1,8 +1,10 @@
 require('dotenv').config()
 const redis = require('redis')
+let redisClient = null
 
 async function connectRedis() {
-    const redisClient = redis.createClient({
+    if (redisClient) return redisClient;
+    redisClient = redis.createClient({
         url: `redis://${process.env.REDIS_HOST}:${process.env.REDIS_PORT}`
     })
     redisClient.on('error', (err) => {

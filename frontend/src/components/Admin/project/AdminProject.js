@@ -104,11 +104,14 @@ const AdminProject = () => {
   };
 
   const prepareDataForSending = (data, isFormData) => {
-    if (isFormData) return data;
-    if (data.image instanceof File) {
+    if (isFormData) {
       const formData = new FormData();
       Object.keys(data).forEach(key => {
-        formData.append(key, data[key]);
+        if (key === 'image' && data[key] instanceof File) {
+          formData.append(key, data[key]);
+        } else if (key !== 'image' || (key === 'image' && data[key] !== null)) {
+          formData.append(key, data[key]);
+        }
       });
       return formData;
     }

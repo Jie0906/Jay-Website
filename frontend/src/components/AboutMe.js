@@ -5,9 +5,8 @@ import { getAboutMe } from '../api/aboutMeApi';
 import Loading from '../components/common/Loading';
 import TimelineItem from '../components/common/TimelineItem';
 
-// 添加 Google Fonts
 const GlobalStyle = createGlobalStyle`
-  @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@700&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700&family=Roboto:wght@400;700&display=swap');
 `;
 
 const AboutMe = () => {
@@ -82,7 +81,7 @@ const AutobiographyItem = ({ item, index }) => {
     <StyledItem ref={ref} inView={inView} index={index}>
       <ItemContent>
         <ItemTitle>{item.title}</ItemTitle>
-        <ItemDescription dangerouslySetInnerHTML={{ __html: item.content }} />
+        <AutobiographyDescription dangerouslySetInnerHTML={{ __html: item.content }} />
       </ItemContent>
     </StyledItem>
   );
@@ -101,11 +100,10 @@ const EducationItem = ({ item, index, isLeft }) => {
       index={index}
       isLeft={isLeft}
       {...item}
-      isAdminMode={false} // 在普通模式下设置为 false
+      isAdminMode={false}
     />
   );
 };
-
 
 const ExperienceItem = ({ item, index }) => {
   const { ref, inView } = useInView({
@@ -123,7 +121,7 @@ const ExperienceItem = ({ item, index }) => {
       <ItemContent>
         <ItemTitle>{item.title}</ItemTitle>
         <ItemSubtitle>{item.subtitle}</ItemSubtitle>
-        <ItemDescription dangerouslySetInnerHTML={{ __html: item.content }} />
+        <ExperienceDescription dangerouslySetInnerHTML={{ __html: item.content }} />
       </ItemContent>
     </StyledItem>
   );
@@ -155,10 +153,14 @@ const AboutMeContainer = styled.div`
   padding: 50px 0;
   background-color: #f5e5d3;
   min-height: 100vh;
+  font-family: 'Roboto', 'Noto Serif TC', sans-serif;
 `;
 
 const Section = styled.div`
   margin-bottom: 50px;
+  max-width: 1000px;
+  margin-left: auto;
+  margin-right: auto;
 `;
 
 const SectionHeader = styled.div`
@@ -187,9 +189,9 @@ const HeaderUnderline = styled.div`
 const ItemList = styled.div`
   display: flex;
   flex-direction: column;
-  align-items: stretch; // 改为 stretch
+  align-items: stretch;
   gap: 30px;
-  width: 100%; // 确保全宽
+  width: 100%;
 `;
 
 const Timeline = styled.div`
@@ -220,7 +222,7 @@ const StyledItem = styled.div`
   transform: translateY(20px);
   animation: ${fadeInUp} 0.6s ease-out forwards;
   animation-delay: ${props => props.index * 0.1}s;
-  width: 100%; // 移除 max-width
+  width: 100%;
 
   &:hover {
     transform: translateY(-5px);
@@ -229,27 +231,6 @@ const StyledItem = styled.div`
 
   @media (max-width: 768px) {
     flex-direction: column;
-  }
-`;
-
-
-const TimelineContent = styled.div`
-  padding: 20px;
-  background-color: #fffaf0;
-  border-radius: 15px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  position: relative;
-
-  &:before {
-    content: '';
-    position: absolute;
-    top: 20px;
-    ${props => props.isLeft ? 'right: -36px;' : 'left: -36px;'}
-    width: 20px;
-    height: 20px;
-    background-color: #d48c2e;
-    border: 4px solid #fffaf0;
-    border-radius: 50%;
   }
 `;
 
@@ -285,25 +266,27 @@ const ItemContent = styled.div`
 const ItemTitle = styled.h3`
   color: #6b4226;
   margin: 0 0 10px 0;
-  font-size: 1.5rem;
+  font-size: 1.8rem;
+  font-family: 'Noto Serif TC', serif;
 `;
 
 const ItemSubtitle = styled.h4`
   color: #8b5a2b;
-  font-size: 1.1rem;
+  font-size: 1.3rem;
   margin: 0 0 10px 0;
 `;
 
-const ItemDescription = styled.div`
+const AutobiographyDescription = styled.div`
   color: #4a3520;
-  font-size: 1rem;
-  line-height: 1.6;
+  font-size: 1.2rem;
+  line-height: 1.8;
+  text-align: justify;
 `;
 
-const TimelineDate = styled.p`
-  color: #8b5a2b;
-  font-size: 0.9rem;
-  margin-top: 10px;
+const ExperienceDescription = styled.div`
+  color: #4a3520;
+  font-size: 1.2rem;
+  line-height: 1.8;
 `;
 
 export default AboutMe;

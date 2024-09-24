@@ -31,6 +31,7 @@ const MainContent = styled.main`
   flex: 1;
   width: 100%;
   padding-top: var(--navbar-height, 60px);
+  background-color: #FFF9F4;
 `;
 
 //調整左右寬度
