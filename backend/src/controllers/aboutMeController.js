@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const AboutMe = require('../models/aboutMeModel')
+const connectRedis = require('../config/redisClient.config')
 
 class AboutMeController {
     createAboutMe = async (req, res, next) => {
@@ -25,6 +26,8 @@ class AboutMeController {
                 infor.imageUrl = req.fileUrl;
             }
             const newAboutMe = await AboutMe.create(infor);
+            const redisClient = await connectRedis()
+            await redisClient.del('/api/aboutMe')
 
             return res.status(201).json({
                 message: 'Created new content successfully!',
@@ -129,6 +132,9 @@ class AboutMeController {
                 error.status = 404;
                 throw error;
             }
+            const redisClient = await connectRedis();
+            await redisClient.del(`/api/aboutMe/${req.params.id}`);
+            await redisClient.del('/api/aboutMe');
 
             return res.status(200).json({
                 message: "Updated content successfully!",
@@ -153,6 +159,9 @@ class AboutMeController {
                 return res.status(404).json({ message: '找不到要刪除的內容' });
             }
             await aboutMeContent.delete(); // 使用 mongoose-delete 的軟刪除方法
+            const redisClient = await connectRedis();
+            await redisClient.del(`/api/aboutMe/${req.params.id}`);
+            await redisClient.del('/api/aboutMe');
             res.status(200).json({ message: '內容已成功軟刪除', deletedContent: aboutMeContent });
         } catch (error) {
             next(error);

@@ -4,7 +4,7 @@ const Project = require('../models/projectModel')
 class ProjectController {
     createProject = async (req, res, next) => {
         try{
-            const { title, content } = req.body
+            const { title, content, date } = req.body
             if (!title || !content ){
                 const error = new Error('Required fields cannot be empty.')
                 error.status = 400
@@ -12,13 +12,18 @@ class ProjectController {
             }
             let infor = {
                 title,
-                content
+                content,
+                date
             }
             if (req.file) {
               infor.imagePath = req.filePath;
               infor.imageUrl = req.fileUrl; 
           }
             const newProject = await Project.create(infor)
+
+            const redisClient = await connectRedis()
+            await redisClient.del('/api/project')
+
             return res.status(201).json({
                 message: 'Created new project successfully!',
                 newProject
@@ -100,6 +105,7 @@ class ProjectController {
         const formattedProject = {
           title: project.title,
           content: project.content,
+          date: project.date,
           imagePath: project.imagePath,
           imageUrl: project.imageUrl,
           createdAt: project.createdAt,
@@ -115,7 +121,7 @@ class ProjectController {
 
     updateProject = async (req, res, next) => {
     try {
-        const { title, content } = req.body;
+        const { title, content, date } = req.body;
         if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
         const error = new Error('Invalid ID');
         error.status = 400;
@@ -123,17 +129,24 @@ class ProjectController {
         }
         let infor = {
           title: title,
-          content : content
+          content : content,
+          date: date
         }  
         if (req.file) {
           infor.image = req.file.path; 
         }
+        console.log(infor)
         const project = await Project.findByIdAndUpdate(req.params.id, infor);
         if (!project) {
         const error = new Error('Project not found');
         error.status = 404;
         throw error;
         }
+
+        const redisClient = await connectRedis();
+        await redisClient.del(`/api/project/${req.params.id}`);
+        await redisClient.del('/api/project');
+
         return res.status(200).json({
             message : "Updated project seccessfully!"
         });
@@ -158,6 +171,11 @@ class ProjectController {
         error.status = 404;
         throw error;
         }
+
+        const redisClient = await connectRedis();
+        await redisClient.del(`/api/project/${req.params.id}`);
+        await redisClient.del('/api/project');
+
         return res.status(204).send();
     } catch (error) {
         next(error);

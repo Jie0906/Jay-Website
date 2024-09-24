@@ -21,6 +21,10 @@ class SkillController {
             infor.imageUrl = req.fileUrl;
         }
         const newSkill = await Skill.create(infor)
+
+        const redisClient = await connectRedis()
+        await redisClient.del('/api/skill')
+
         return res.status(201).json({
             message: 'Created new skill successfully!',
             newSkill
@@ -84,6 +88,10 @@ class SkillController {
         error.status = 404;
         throw error;
         }
+
+        const redisClient = await connectRedis();
+        await redisClient.del('/api/skill');
+
         return res.status(200).json({
           message : "Updated skill seccessfully!"
         });
@@ -108,6 +116,10 @@ class SkillController {
               error.status = 404;
               throw error;
           }
+
+          const redisClient = await connectRedis();
+          await redisClient.del('/api/skill');
+
           return res.status(200).json({ message: 'Skill deleted successfully' }); // 修改狀態碼為 200 並返回消息
       } catch (error) {
           next(error);

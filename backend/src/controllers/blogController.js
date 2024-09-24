@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const Blog = require('../models/blogModel')
+const connectRedis = require('../config/redisClient.config')
 
 class BlogController {
     createBlog = async (req, res, next) => {
@@ -17,6 +18,9 @@ class BlogController {
                 date : date
             }
             await Blog.create(infor)
+
+            const redisClient = await connectRedis()
+            await redisClient.del('/api/blog')
             return res.status(201).json({
                 message: 'Created new post successfully!'
               });
@@ -195,6 +199,10 @@ class BlogController {
         error.status = 404;
         throw error;
         }
+        const redisClient = await connectRedis();
+        await redisClient.del(`/api/blog/${req.params.id}`);
+        await redisClient.del('/api/blog');
+
         return res.status(200).json(post);
     } catch (error) {
         next(error);
@@ -214,6 +222,9 @@ class BlogController {
         error.status = 404;
         throw error;
         }
+        const redisClient = await connectRedis();
+        await redisClient.del(`/api/blog/${req.params.id}`);
+        await redisClient.del('/api/blog');
         return res.status(204).send();
     } catch (error) {
         next(error);
